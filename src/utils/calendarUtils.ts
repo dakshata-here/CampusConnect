@@ -56,6 +56,19 @@ export function isTimeOverlapping(
   if (date1 !== date2) return false;
   // Convert 'HH:MM' to total minutes from midnight
   const toMinutes = (t: string) => {
+<<<<<<< HEAD
+=======
+    if (!t) return 0;
+    const match = t.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+    if (match) {
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const ampm = match[3]?.toUpperCase();
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return h * 60 + m;
+    }
+>>>>>>> eff49e3 (First commit)
     const [h, m] = t.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
   };
@@ -65,12 +78,21 @@ export function isTimeOverlapping(
   const s2 = toMinutes(start2);
   const e2 = toMinutes(end2);
 
+<<<<<<< HEAD
   // Overlaps if start of one is before end of other and vice versa
+=======
+  // Exact same start or overlapping time intervals
+  if (s1 === s2) return true;
+>>>>>>> eff49e3 (First commit)
   return Math.max(s1, s2) < Math.min(e1, e2);
 }
 
 /**
+<<<<<<< HEAD
  * Detect both venue conflicts and time conflicts against existing approved/published events
+=======
+ * Detect venue conflicts against existing events approved by the admin
+>>>>>>> eff49e3 (First commit)
  */
 export function detectEventConflicts(
   target: {
@@ -78,17 +100,28 @@ export function detectEventConflicts(
     date: string;
     startTime: string;
     endTime: string;
+<<<<<<< HEAD
     venueId: string;
   },
   existingEvents: CampusEvent[]
 ): ConflictCheckResult {
   const activeEvents = existingEvents.filter(
+=======
+    venueId?: string;
+    venueName?: string;
+  },
+  existingEvents: CampusEvent[]
+): ConflictCheckResult {
+  // Only check against events approved by the admin
+  const approvedEvents = existingEvents.filter(
+>>>>>>> eff49e3 (First commit)
     (e) =>
       e.id !== target.id &&
       (e.status === 'approved' || e.status === 'published' || e.status === 'registration_open') &&
       e.date === target.date
   );
 
+<<<<<<< HEAD
   // 1. Check for venue clash (same venue + overlapping time)
   const venueClash = activeEvents.find(
     (e) =>
@@ -97,10 +130,31 @@ export function detectEventConflicts(
   );
 
   if (venueClash) {
+=======
+  // Check for same venue + same date + overlapping/matching time
+  const venueClash = approvedEvents.find((e) => {
+    const isSameVenue =
+      (target.venueId && e.venueId && target.venueId === e.venueId) ||
+      (target.venueName && e.venueName && target.venueName.trim().toLowerCase() === e.venueName.trim().toLowerCase());
+
+    if (!isSameVenue) return false;
+
+    return isTimeOverlapping(target.date, target.startTime, target.endTime, e.date, e.startTime, e.endTime);
+  });
+
+  if (venueClash) {
+    const rawClub = (venueClash.clubName || 'College').trim();
+    // Format as: 'It is Booked for same date and time by (club name) club'
+    const clubFormatted = rawClub.toLowerCase().endsWith('club')
+      ? rawClub
+      : `${rawClub} club`;
+
+>>>>>>> eff49e3 (First commit)
     return {
       hasConflict: true,
       type: 'venue',
       conflictingEvent: venueClash,
+<<<<<<< HEAD
       message: `Venue Conflict: "${venueClash.venueName}" is already reserved for "${venueClash.title}" from ${formatDisplayTime(venueClash.startTime)} to ${formatDisplayTime(venueClash.endTime)}.`
     };
   }
@@ -119,6 +173,13 @@ export function detectEventConflicts(
     };
   }
 
+=======
+      message: `It is Booked for same date and time by ${clubFormatted}`
+    };
+  }
+
+  // If no venue match with an approved event, no conflict/warning
+>>>>>>> eff49e3 (First commit)
   return { hasConflict: false };
 }
 

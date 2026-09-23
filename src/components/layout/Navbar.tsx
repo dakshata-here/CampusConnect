@@ -92,12 +92,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           
+<<<<<<< HEAD
           {/* Left: Mobile Menu Toggle & Brand Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={onToggleMobileSidebar}
               className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
               aria-label="Toggle navigation menu"
+=======
+          {/* Left: Sidebar Toggle Menu (three lines icon) & Brand Logo */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button
+              onClick={onToggleMobileSidebar}
+              className="p-2 -ml-1 sm:-ml-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors"
+              aria-label="Toggle dashboard sidebar menu"
+              title="Toggle Sidebar Navigation"
+>>>>>>> eff49e3 (First commit)
             >
               <Menu className="w-5 h-5" />
             </button>

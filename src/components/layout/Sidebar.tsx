@@ -165,16 +165,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
 
   return (
     <>
+<<<<<<< HEAD
       {/* Mobile Backdrop Overlay */}
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+=======
+      {/* Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 transition-opacity"
+>>>>>>> eff49e3 (First commit)
         />
       )}
 
       {/* Sidebar Container */}
       <aside
+<<<<<<< HEAD
         className={`fixed top-16 bottom-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'
         } flex flex-col justify-between overflow-y-auto`}
@@ -188,6 +197,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
               className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X className="w-5 h-5" />
+=======
+        className={`fixed top-16 bottom-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-200 ease-in-out ${
+          mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full pointer-events-none'
+        } flex flex-col justify-between overflow-y-auto`}
+      >
+        <div className="p-5 space-y-6">
+          {/* Header & Close button */}
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Navigation Menu</span>
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none transition-colors"
+              title="Close Sidebar"
+              aria-label="Close sidebar"
+            >
+              <X className="w-4 h-4" />
+>>>>>>> eff49e3 (First commit)
             </button>
           </div>
 

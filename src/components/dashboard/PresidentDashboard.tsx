@@ -288,7 +288,12 @@ export const PresidentDashboard: React.FC = () => {
                   date: evt.date,
                   startTime: evt.startTime,
                   endTime: evt.endTime,
+<<<<<<< HEAD
                   venueId: evt.venueId
+=======
+                  venueId: evt.venueId,
+                  venueName: evt.venueName
+>>>>>>> eff49e3 (First commit)
                 },
                 events
               );
@@ -350,8 +355,13 @@ export const PresidentDashboard: React.FC = () => {
                     )}
 
                     {conflict.hasConflict && (
+<<<<<<< HEAD
                       <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+=======
+                      <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 flex items-center gap-1.5 font-medium">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+>>>>>>> eff49e3 (First commit)
                         <span className="truncate">{conflict.message}</span>
                       </div>
                     )}

@@ -183,7 +183,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       date,
       startTime,
       endTime,
+<<<<<<< HEAD
       venueId
+=======
+      venueId,
+      venueName: selectedVenue?.name
+>>>>>>> eff49e3 (First commit)
     },
     events
   );
@@ -194,6 +199,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       return;
     }
 
+<<<<<<< HEAD
+=======
+    if (conflict.hasConflict) {
+      alert(conflict.message);
+      return;
+    }
+
+>>>>>>> eff49e3 (First commit)
     if (registrationRequired && !asDraft) {
       if (registrationMethod === 'qr' && !registrationQrUrl.trim()) {
         alert('Please upload a QR code image or provide a QR image URL.');
@@ -279,6 +292,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
           
           {/* Real-time Conflict Alert Box */}
           {conflict.hasConflict && (
+<<<<<<< HEAD
             <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 animate-bounce" />
               <div className="space-y-1 text-xs">
@@ -290,6 +304,22 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                 </p>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
                   Tip: Change the venue or adjust start/end times to avoid overlapping with "{conflict.conflictingEvent?.title}".
+=======
+            <div
+              role="alert"
+              className="p-4 rounded-2xl border flex items-start gap-3 bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800"
+            >
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400 animate-bounce" />
+              <div className="space-y-1 text-xs">
+                <div className="font-extrabold text-rose-900 dark:text-rose-200">
+                  ⚠️ Venue Conflict
+                </div>
+                <p className="font-bold leading-relaxed text-rose-800 dark:text-rose-300 text-sm">
+                  {conflict.message}
+                </p>
+                <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                  Please select a different venue or adjust the event date/time.
+>>>>>>> eff49e3 (First commit)
                 </div>
               </div>
             </div>
@@ -630,7 +660,15 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                 <select
                   value={venueId}
                   onChange={(e) => setVenueId(e.target.value)}
+<<<<<<< HEAD
                   className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-medium"
+=======
+                  className={`w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 p-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                    conflict.hasConflict && conflict.type === 'venue'
+                      ? 'border-rose-500 dark:border-rose-500 ring-2 ring-rose-400/30'
+                      : 'border-slate-300 dark:border-slate-700'
+                  }`}
+>>>>>>> eff49e3 (First commit)
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -638,6 +676,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                     </option>
                   ))}
                 </select>
+<<<<<<< HEAD
+=======
+
+                {/* Venue Conflict Error Message right below the dropdown */}
+                {conflict.hasConflict && conflict.type === 'venue' && (
+                  <div
+                    role="alert"
+                    className="mt-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 animate-in fade-in"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                    <span>{conflict.message}</span>
+                  </div>
+                )}
+
+>>>>>>> eff49e3 (First commit)
                 {selectedVenue && (
                   <div className="mt-1.5 flex items-center gap-2 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
                     <span className="font-semibold text-indigo-600 dark:text-indigo-400">Facilities:</span>

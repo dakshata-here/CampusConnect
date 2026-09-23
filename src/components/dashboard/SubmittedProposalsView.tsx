@@ -20,7 +20,11 @@ import {
   Check,
   X
 } from 'lucide-react';
+<<<<<<< HEAD
 import { formatDisplayDate, formatDisplayTime } from '../../utils/calendarUtils';
+=======
+import { formatDisplayDate, formatDisplayTime, detectEventConflicts } from '../../utils/calendarUtils';
+>>>>>>> eff49e3 (First commit)
 
 export const SubmittedProposalsView: React.FC = () => {
   const {
@@ -68,6 +72,23 @@ export const SubmittedProposalsView: React.FC = () => {
     setEditMaxParticipants(event.maxParticipants || 100);
   };
 
+<<<<<<< HEAD
+=======
+  const editConflict = editingEvent
+    ? detectEventConflicts(
+        {
+          id: editingEvent.id,
+          date: editDate,
+          startTime: editStartTime,
+          endTime: editEndTime,
+          venueId: editVenueId,
+          venueName: venues.find((v) => v.id === editVenueId)?.name
+        },
+        events
+      )
+    : { hasConflict: false };
+
+>>>>>>> eff49e3 (First commit)
   const handleSaveRequiredChanges = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
@@ -77,6 +98,14 @@ export const SubmittedProposalsView: React.FC = () => {
       return;
     }
 
+<<<<<<< HEAD
+=======
+    if (editConflict.hasConflict && editConflict.type === 'venue') {
+      alert(editConflict.message);
+      return;
+    }
+
+>>>>>>> eff49e3 (First commit)
     const selectedVenue = venues.find((v) => v.id === editVenueId);
 
     const updates: Partial<CampusEvent> = {
@@ -501,7 +530,15 @@ export const SubmittedProposalsView: React.FC = () => {
                 <select
                   value={editVenueId}
                   onChange={(e) => setEditVenueId(e.target.value)}
+<<<<<<< HEAD
                   className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100"
+=======
+                  className={`w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-xl text-xs text-slate-900 dark:text-slate-100 ${
+                    editConflict.hasConflict && editConflict.type === 'venue'
+                      ? 'border-rose-500 ring-2 ring-rose-400/30'
+                      : 'border-slate-300 dark:border-slate-700'
+                  }`}
+>>>>>>> eff49e3 (First commit)
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -509,6 +546,19 @@ export const SubmittedProposalsView: React.FC = () => {
                     </option>
                   ))}
                 </select>
+<<<<<<< HEAD
+=======
+
+                {editConflict.hasConflict && editConflict.type === 'venue' && (
+                  <div
+                    role="alert"
+                    className="mt-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 animate-in fade-in"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                    <span>{editConflict.message}</span>
+                  </div>
+                )}
+>>>>>>> eff49e3 (First commit)
               </div>
 
               {/* Short Description */}

@@ -60,7 +60,12 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
       date: !isAdmin && isChangesRequested ? editDate : event.date,
       startTime: !isAdmin && isChangesRequested ? editStartTime : event.startTime,
       endTime: !isAdmin && isChangesRequested ? editEndTime : event.endTime,
+<<<<<<< HEAD
       venueId: !isAdmin && isChangesRequested ? editVenueId : event.venueId
+=======
+      venueId: !isAdmin && isChangesRequested ? editVenueId : event.venueId,
+      venueName: !isAdmin && isChangesRequested ? venues.find((v) => v.id === editVenueId)?.name : event.venueName
+>>>>>>> eff49e3 (First commit)
     },
     events
   );
@@ -238,6 +243,7 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
 
           {/* Conflict Warning Box */}
           {conflict.hasConflict && (
+<<<<<<< HEAD
             <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
@@ -245,6 +251,15 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
                   {conflict.type === 'venue' ? '⚠️ Venue Overlap Conflict' : '⚠️ Time Overlap Warning'}
                 </div>
                 <div className="text-amber-800 dark:text-amber-300">{conflict.message}</div>
+=======
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <div className="font-extrabold text-rose-900 dark:text-rose-200">
+                  ⚠️ Venue Conflict
+                </div>
+                <div className="text-rose-800 dark:text-rose-300 font-bold">{conflict.message}</div>
+>>>>>>> eff49e3 (First commit)
                 {isAdmin && (
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     As College Admin, you can "Request Changes" to ask the club lead to adjust the venue or time, or override and approve.

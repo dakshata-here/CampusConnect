@@ -219,15 +219,24 @@ export function App() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
+<<<<<<< HEAD
       {/* Body with Fixed Sidebar and Fluid Content Area */}
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
+=======
+      {/* Body with Toggleable Drawer Sidebar and Fluid Content Area */}
+      <div className="flex-1 flex max-w-7xl w-full mx-auto relative">
+>>>>>>> eff49e3 (First commit)
         <Sidebar
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={() => setMobileSidebarOpen(false)}
         />
 
         {/* Main Content Viewport */}
+<<<<<<< HEAD
         <main className="flex-1 lg:pl-64 p-4 sm:p-6 lg:p-8 min-w-0 transition-all">
+=======
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 transition-all">
+>>>>>>> eff49e3 (First commit)
           <div className="max-w-6xl mx-auto">{renderMainContent()}</div>
         </main>
       </div>

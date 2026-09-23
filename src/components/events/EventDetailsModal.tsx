@@ -63,6 +63,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
   const [regError, setRegError] = useState('');
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+<<<<<<< HEAD
+=======
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+>>>>>>> eff49e3 (First commit)
 
   // Reschedule form state
   const [newDate, setNewDate] = useState(event.date);
@@ -110,6 +115,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     setShowRescheduleForm(false);
   };
 
+<<<<<<< HEAD
+=======
+  const handleConfirmCancel = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    cancelEvent(event.id, cancelReason.trim() || 'Event cancelled by organizer');
+    setShowCancelForm(false);
+    onClose();
+  };
+
+>>>>>>> eff49e3 (First commit)
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
       <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
@@ -569,6 +584,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     {showRescheduleForm ? 'Cancel Reschedule' : 'Reschedule Event'}
                   </button>
 
+<<<<<<< HEAD
                   <button
                     onClick={() => {
                       const reason = prompt('Please enter cancellation reason for this event:');
@@ -581,6 +597,24 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     <Trash2 className="w-3.5 h-3.5" />
                     Cancel Event
                   </button>
+=======
+                  {event.status !== 'cancelled' ? (
+                    <button
+                      onClick={() => {
+                        setShowCancelForm(!showCancelForm);
+                        setShowRescheduleForm(false);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 font-semibold text-xs transition-colors flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {showCancelForm ? 'Dismiss Cancel' : 'Cancel Event'}
+                    </button>
+                  ) : (
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 font-semibold text-xs flex items-center gap-1">
+                      Event Cancelled
+                    </span>
+                  )}
+>>>>>>> eff49e3 (First commit)
                 </div>
               </div>
 
@@ -665,6 +699,56 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                   </div>
                 </form>
               )}
+<<<<<<< HEAD
+=======
+
+              {/* Cancel Confirmation Inline Form */}
+              {showCancelForm && (
+                <form
+                  onSubmit={handleConfirmCancel}
+                  className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 space-y-3 text-xs animate-in fade-in"
+                >
+                  <div className="flex items-center gap-2 font-bold text-rose-800 dark:text-rose-300">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                    Confirm Event Cancellation
+                  </div>
+
+                  <p className="text-rose-900 dark:text-rose-200 leading-relaxed">
+                    Are you sure you want to cancel <strong>"{event.title}"</strong>? This will mark the event as cancelled, free up <strong>"{event.venueName}"</strong>, and notify all registered attendees.
+                  </p>
+
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Reason for Cancellation (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Unforeseen circumstances or scheduling adjustment"
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelForm(false)}
+                      className="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Confirm & Cancel Event
+                    </button>
+                  </div>
+                </form>
+              )}
+>>>>>>> eff49e3 (First commit)
             </div>
           )}
 

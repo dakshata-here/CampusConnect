@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+>>>>>>> eff49e3 (First commit)
 import { useApp } from '../../context/AppContext';
 import { UserRole } from '../../types';
 import brightCampusBg from '../../assets/images/bright-campus.jpg';
@@ -46,7 +50,14 @@ export const DEFAULT_ADMIN_ANSWERS: Record<string, string> = {
 
 export const LoginPage: React.FC = () => {
   const {
+<<<<<<< HEAD
     loginUser,
+=======
+    currentUser,
+    allUsers,
+    loginUser,
+    setCurrentUser,
+>>>>>>> eff49e3 (First commit)
     registerUser,
     submitRegistrationRequest,
     registrationRequests,
@@ -69,16 +80,33 @@ export const LoginPage: React.FC = () => {
   const [studentCaptchaChecked, setStudentCaptchaChecked] = useState(false);
   const [studentCaptchaLoading, setStudentCaptchaLoading] = useState(false);
 
+<<<<<<< HEAD
   // Lead Login Fields (Student/Faculty selector + ID + Club ID + Password + Captcha)
   const [leadUserType, setLeadUserType] = useState<'student' | 'faculty'>('student');
   const [leadStudentPrn, setLeadStudentPrn] = useState('C2K2210012');
   const [leadFacultyId, setLeadFacultyId] = useState('PICT-FAC-401');
   const [leadClubId, setLeadClubId] = useState('ACM26001');
+=======
+  // Lead Login Fields (Student/Faculty selector + ID + Club + Password + Captcha)
+  const [leadUserType, setLeadUserType] = useState<'student' | 'faculty'>('student');
+  const [leadStudentPrn, setLeadStudentPrn] = useState('C2K2210012');
+  const [leadFacultyId, setLeadFacultyId] = useState('PICT-FAC-401');
+  const [leadClub, setLeadClub] = useState(clubs[0]?.name || 'PICT ACM Student Chapter');
+>>>>>>> eff49e3 (First commit)
   const [leadPassword, setLeadPassword] = useState('Lead@2026');
   const [leadShowPassword, setLeadShowPassword] = useState(false);
   const [leadCaptchaChecked, setLeadCaptchaChecked] = useState(false);
   const [leadCaptchaLoading, setLeadCaptchaLoading] = useState(false);
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+    if (!leadClub && clubs.length > 0) {
+      setLeadClub(clubs[0].name);
+    }
+  }, [clubs, leadClub]);
+
+>>>>>>> eff49e3 (First commit)
   // Admin Login Fields (Faculty ID + Password + 2-Step Security Verification + Captcha)
   const [adminFacultyId, setAdminFacultyId] = useState('PICT-ADM-108');
   const [adminPassword, setAdminPassword] = useState('PictAdmin@2026');
@@ -286,8 +314,13 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+<<<<<<< HEAD
     if (!leadClubId.trim()) {
       setErrorMessage('Please enter your Club ID (e.g. ACM26001).');
+=======
+    if (!leadClub.trim()) {
+      setErrorMessage('Please select your club from the dropdown.');
+>>>>>>> eff49e3 (First commit)
       return;
     }
 
@@ -301,6 +334,27 @@ export const LoginPage: React.FC = () => {
       success = loginUser(idToUse, 'subhead');
     }
     if (success) {
+<<<<<<< HEAD
+=======
+      if (leadClub) {
+        const selectedClubObj = clubs.find((c) => c.name === leadClub || c.id === leadClub);
+        if (selectedClubObj) {
+          const target =
+            allUsers.find(
+              (u) =>
+                (u.role === 'president' || u.role === 'subhead') &&
+                (u.email.toLowerCase() === idToUse.toLowerCase() ||
+                  (u.enrollmentNumber && u.enrollmentNumber.toLowerCase() === idToUse.toLowerCase()))
+            ) || currentUser;
+
+          setCurrentUser({
+            ...target,
+            clubId: selectedClubObj.id,
+            clubName: selectedClubObj.name
+          });
+        }
+      }
+>>>>>>> eff49e3 (First commit)
       setActiveTab('dashboard');
     } else {
       setErrorMessage('Invalid club coordinator credentials.');
@@ -867,6 +921,7 @@ export const LoginPage: React.FC = () => {
                   </div>
                 )}
 
+<<<<<<< HEAD
                 {/* Club ID */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -891,6 +946,28 @@ export const LoginPage: React.FC = () => {
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                     Ex: For ACM club in 2026 for lead #1, enter <span className="font-semibold text-sky-600 dark:text-sky-300">ACM26001</span>
                   </p>
+=======
+                {/* Club */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Club *
+                  </label>
+                  <div className="relative">
+                    <Shield className="w-4 h-4 text-sky-500/80 dark:text-sky-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <select
+                      required
+                      value={leadClub}
+                      onChange={(e) => setLeadClub(e.target.value)}
+                      className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-8 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 cursor-pointer"
+                    >
+                      {clubs.map((c) => (
+                        <option key={c.id} value={c.name} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+>>>>>>> eff49e3 (First commit)
                 </div>
 
                 {/* Password */}
