@@ -1,0 +1,8 @@
+{
+  "name": "Remix CampusConnect",
+  "description": "Centralized academic and college club event management calendar with role-based workflows for students, club presidents, subheads, and college admins.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
