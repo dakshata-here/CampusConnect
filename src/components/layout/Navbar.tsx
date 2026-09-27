@@ -51,7 +51,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+<<<<<<< HEAD
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +96,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+          {/* Left: Mobile Menu Toggle & Brand Logo */}
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={onToggleMobileSidebar}
+              className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
+              aria-label="Toggle navigation menu"
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           {/* Left: Sidebar Toggle Menu (three lines icon) & Brand Logo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
@@ -100,6 +114,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
               className="p-2 -ml-1 sm:-ml-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors"
               aria-label="Toggle dashboard sidebar menu"
               title="Toggle Sidebar Navigation"
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -245,7 +263,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
           {/* Right Action Icons & User Profile */}
           <div className="flex items-center gap-2">
             {/* Quick action button tailored to role */}
+<<<<<<< HEAD
             {(currentUser.role === 'subhead' || currentUser.role === 'president' || currentUser.leadType === 'faculty') && (
+=======
+            {(currentUser.role === 'subhead' || currentUser.role === 'president') && (
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               <button
                 onClick={() => setIsCreateEventOpen(true)}
                 className="hidden md:inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition-all"
@@ -265,6 +287,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
               </button>
             )}
 
+<<<<<<< HEAD
             {/* Mobile Search Toggle Button */}
             <button
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
@@ -275,6 +298,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
               <Search className="w-5 h-5" />
             </button>
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             {/* Notification Bell with Dropdown */}
             <div className="relative" ref={notifRef}>
               <button
@@ -291,7 +316,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
 
               {/* Notification Drawer */}
               {isNotifOpen && (
+<<<<<<< HEAD
                 <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50">
+=======
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100">
@@ -501,6 +530,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
           </div>
 
         </div>
+<<<<<<< HEAD
 
         {/* Mobile Search Expandable Bar */}
         {isMobileSearchOpen && (
@@ -562,6 +592,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar, onOpenAut
             )}
           </div>
         )}
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       </div>
     </header>
   );

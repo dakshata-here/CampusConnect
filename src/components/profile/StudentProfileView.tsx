@@ -33,7 +33,11 @@ export const StudentProfileView: React.FC = () => {
   const userRegs = registrations.filter((r) => r.studentId === currentUser.id);
   const registeredEvents = userRegs
     .map((r) => ({ reg: r, event: events.find((e) => e.id === r.eventId) }))
+<<<<<<< HEAD
     .filter((item): item is { reg: typeof userRegs[0]; event: typeof events[0] } => !!item.event && item.event.status !== 'cancelled');
+=======
+    .filter((item): item is { reg: typeof userRegs[0]; event: typeof events[0] } => !!item.event);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   const upcomingPasses = registeredEvents.filter((item) => item.reg.attendanceStatus === 'registered');
   const attendedPasses = registeredEvents.filter((item) => item.reg.attendanceStatus === 'attended');

@@ -532,7 +532,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 : targetReq.role === 'lead'
                 ? 'president'
                 : 'student',
+<<<<<<< HEAD
             leadType: targetReq.leadType,
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             enrollmentNumber: targetReq.idNumber,
             department: targetReq.department,
             year: targetReq.year,
@@ -628,7 +631,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       registrationLink: eventData.registrationLink,
       registrationQrUrl: eventData.registrationQrUrl,
       registrationDeadline: eventData.registrationDeadline,
+<<<<<<< HEAD
       meetingLink: eventData.meetingLink,
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       maxParticipants: eventData.maxParticipants || 100,
       currentRegistrations: 0,
       eligibility: eventData.eligibility || 'Open to all students',
@@ -1034,11 +1040,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
+<<<<<<< HEAD
     // If the modal was viewing this event, close it
     if (selectedEventForModal?.id === eventId) {
       setSelectedEventForModal(null);
     }
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     // Notify all registered students
     const registeredStudentIds = registrations.filter((r) => r.eventId === eventId).map((r) => r.studentId);
     registeredStudentIds.forEach((studentId) => {

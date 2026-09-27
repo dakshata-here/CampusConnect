@@ -62,6 +62,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose }) => {
   };
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in">
       <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto sm:my-6 max-h-[96dvh] flex flex-col">
         
@@ -76,6 +77,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose }) => {
                 Live Attendance Desk & QR Scanner
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 sm:line-clamp-none">
+=======
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
+        
+        {/* Header */}
+        <div className="p-5 sm:p-6 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-amber-600 text-white shadow-sm">
+              <QrCode className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                Live Attendance Desk & QR Scanner
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 Scan attendee QR passes at the entrance to verify check-in and issue certificates.
               </p>
             </div>
@@ -83,15 +100,23 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose }) => {
 
           <button
             onClick={onClose}
+<<<<<<< HEAD
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
             aria-label="Close modal"
+=======
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
+<<<<<<< HEAD
         <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto overscroll-contain">
+=======
+        <div className="p-5 sm:p-6 space-y-6 max-h-[calc(85vh-10rem)] overflow-y-auto">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           
           {/* Target Event Selector */}
           <div>

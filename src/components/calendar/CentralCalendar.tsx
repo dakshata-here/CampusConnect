@@ -83,7 +83,10 @@ export const CentralCalendar: React.FC = () => {
 
   // Filter events based on active layers - Only Admin-approved events are displayed on the calendar
   const visibleEvents = allEventsForCalendar.filter((e) => {
+<<<<<<< HEAD
     if (e.status === 'cancelled') return false;
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     const isApproved = ['approved', 'published', 'registration_open', 'registration_closed', 'completed', 'live', 'postponed'].includes(e.status);
     if (!isApproved) return false;
 
@@ -128,11 +131,19 @@ export const CentralCalendar: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Month & Nav */}
+<<<<<<< HEAD
           <div className="flex items-center justify-between sm:justify-start gap-3 w-full md:w-auto">
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 min-w-0 sm:min-w-[180px]">
               {formatMonthYear(currentDate)}
             </h2>
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shrink-0">
+=======
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 min-w-[180px]">
+              {formatMonthYear(currentDate)}
+            </h2>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               <button
                 onClick={prevMonth}
                 className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
@@ -157,9 +168,15 @@ export const CentralCalendar: React.FC = () => {
           </div>
 
           {/* View Mode & Club Filter */}
+<<<<<<< HEAD
           <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
             {/* Layer Filter Tabs */}
             <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium overflow-x-auto w-full sm:w-auto">
+=======
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Layer Filter Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               {[
                 { id: 'all', label: 'All Events' },
                 { id: 'club', label: 'Clubs Only' },
@@ -168,7 +185,11 @@ export const CentralCalendar: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setSelectedFilter(tab.id)}
+<<<<<<< HEAD
                   className={`px-3 py-1.5 rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+=======
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                     selectedFilter === tab.id
                       ? 'bg-blue-600 text-white font-semibold shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -183,7 +204,11 @@ export const CentralCalendar: React.FC = () => {
             <select
               value={selectedClubFilter}
               onChange={(e) => setSelectedClubFilter(e.target.value)}
+<<<<<<< HEAD
               className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-1.5 px-3 rounded-lg border-none focus:ring-1 focus:ring-blue-500 w-full sm:w-auto"
+=======
+              className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-1.5 px-3 rounded-lg border-none focus:ring-1 focus:ring-blue-500"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             >
               <option value="all">All Clubs ({clubs.length})</option>
               {clubs.map((c) => (
@@ -243,7 +268,11 @@ export const CentralCalendar: React.FC = () => {
                   <div
                     key={`${wIdx}-${cIdx}`}
                     onClick={() => setSelectedDayDate(cell.dateStr)}
+<<<<<<< HEAD
                     className={`min-h-[58px] sm:min-h-[105px] p-1 sm:p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+=======
+                    className={`min-h-[85px] sm:min-h-[105px] p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                       isSelected
                         ? 'ring-2 ring-blue-600 bg-blue-50/40 dark:bg-blue-950/30 border-blue-400'
                         : cell.isCurrentMonth
@@ -254,7 +283,11 @@ export const CentralCalendar: React.FC = () => {
                     {/* Date Number Header */}
                     <div className="flex items-center justify-between">
                       <span
+<<<<<<< HEAD
                         className={`text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center ${
+=======
+                        className={`text-xs font-bold w-6 h-6 rounded-md flex items-center justify-center ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                           cell.isToday
                             ? 'bg-blue-600 text-white shadow-xs'
                             : isSelected
@@ -266,13 +299,18 @@ export const CentralCalendar: React.FC = () => {
                       </span>
 
                       {dayEvents.length > 0 && (
+<<<<<<< HEAD
                         <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-700 px-1 sm:px-1.5 py-0.2 rounded-full">
+=======
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-200/70 dark:bg-slate-700 px-1.5 py-0.2 rounded-full">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                           {dayEvents.length}
                         </span>
                       )}
                     </div>
 
                     {/* Event Badges List */}
+<<<<<<< HEAD
                     <div className="space-y-1 my-0.5 sm:my-1 overflow-hidden">
                       {/* Mobile Compact Event Dots */}
                       <div className="flex sm:hidden items-center justify-center gap-1 flex-wrap">
@@ -320,6 +358,31 @@ export const CentralCalendar: React.FC = () => {
                           </div>
                         )}
                       </div>
+=======
+                    <div className="space-y-1 my-1 overflow-hidden">
+                      {dayEvents.slice(0, 2).map((evt) => (
+                        <div
+                          key={evt.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEventForModal(evt);
+                          }}
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded border truncate leading-tight transition-transform hover:opacity-80 ${getEventTypeColor(
+                            evt
+                          )}`}
+                          title={`${evt.title} (${evt.startTime} at ${evt.venueName})`}
+                        >
+                          {evt.isDontMiss && '🔥 '}
+                          {evt.title}
+                        </div>
+                      ))}
+
+                      {dayEvents.length > 2 && (
+                        <div className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 text-center">
+                          +{dayEvents.length - 2} more
+                        </div>
+                      )}
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                     </div>
 
                     <div />

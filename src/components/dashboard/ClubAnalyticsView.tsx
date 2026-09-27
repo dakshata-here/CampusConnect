@@ -32,7 +32,11 @@ export const ClubAnalyticsView: React.FC = () => {
   const { currentUser, clubs, events, registrations } = useApp();
 
   const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
+<<<<<<< HEAD
   const clubEvents = events.filter((e) => e.clubId === myClub.id && e.status !== 'cancelled');
+=======
+  const clubEvents = events.filter((e) => e.clubId === myClub.id);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   const [timePeriod, setTimePeriod] = useState<'year' | 'semester' | 'month'>('year');
 

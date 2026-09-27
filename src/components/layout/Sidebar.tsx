@@ -62,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
 
   const getNavItems = (): { section: string; items: NavItem[] }[] => {
     switch (currentUser.role) {
+<<<<<<< HEAD
       case 'student': {
         const isFaculty = currentUser.leadType === 'faculty' || currentUser.year === 'Faculty Coordinator';
         return [
@@ -78,6 +79,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
                     action: () => setIsCreateEventOpen(true)
                   }
                 : { id: 'events', label: 'Explore Events', icon: Sparkles },
+=======
+      case 'student':
+        return [
+          {
+            section: 'STUDENT PORTAL',
+            items: [
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'calendar', label: 'Campus Calendar', icon: Calendar },
+              { id: 'events', label: 'Explore Events', icon: Sparkles },
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               { id: 'academic', label: 'Academic Schedule', icon: GraduationCap },
               {
                 id: 'my-events',
@@ -90,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
             ]
           }
         ];
+<<<<<<< HEAD
       }
 
       case 'president': {
@@ -105,6 +117,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
                 icon: PlusCircle,
                 action: () => setIsCreateEventOpen(true)
               },
+=======
+
+      case 'president':
+        return [
+          {
+            section: 'PRESIDENT CONTROL',
+            items: [
+              { id: 'dashboard', label: 'Club Dashboard', icon: LayoutDashboard },
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               { id: 'my-club', label: 'My Club Hub', icon: Building2 },
               {
                 id: 'event-requests',
@@ -121,7 +142,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
             ]
           }
         ];
+<<<<<<< HEAD
       }
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
       case 'subhead':
         return [
@@ -182,17 +206,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
 
   return (
     <>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+      {/* Mobile Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       {/* Backdrop Overlay */}
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 transition-opacity"
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
         />
       )}
 
       {/* Sidebar Container */}
       <aside
+<<<<<<< HEAD
         className={`fixed top-0 sm:top-16 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-200 ease-in-out ${
+=======
+<<<<<<< HEAD
+        className={`fixed top-16 bottom-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'
+        } flex flex-col justify-between overflow-y-auto`}
+      >
+        <div className="p-5 space-y-6">
+          {/* Close button on mobile */}
+          <div className="flex items-center justify-between lg:hidden pb-2 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Navigation</span>
+            <button
+              onClick={onCloseMobile}
+              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <X className="w-5 h-5" />
+=======
+        className={`fixed top-16 bottom-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-200 ease-in-out ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full pointer-events-none'
         } flex flex-col justify-between overflow-y-auto`}
       >
@@ -207,6 +264,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
               aria-label="Close sidebar"
             >
               <X className="w-4 h-4" />
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             </button>
           </div>
 

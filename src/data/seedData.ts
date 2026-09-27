@@ -86,6 +86,7 @@ export const INITIAL_USERS: User[] = [
     phone: '+91 94220 55667',
     bio: 'Lead organizer for Pulzion & ACM SIG sessions.'
   },
+<<<<<<< HEAD
   {
     id: 'user_lead_fac_acm',
     name: 'Prof. S. R. Hiray',
@@ -102,6 +103,8 @@ export const INITIAL_USERS: User[] = [
     phone: '+91 98220 12345',
     bio: 'Faculty Advisor & Club Lead Coordinator.'
   },
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   // Club Subheads / Admins
   {

@@ -20,7 +20,15 @@ import {
   Check,
   X
 } from 'lucide-react';
+<<<<<<< HEAD
 import { formatDisplayDate, formatDisplayTime, detectEventConflicts } from '../../utils/calendarUtils';
+=======
+<<<<<<< HEAD
+import { formatDisplayDate, formatDisplayTime } from '../../utils/calendarUtils';
+=======
+import { formatDisplayDate, formatDisplayTime, detectEventConflicts } from '../../utils/calendarUtils';
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
 export const SubmittedProposalsView: React.FC = () => {
   const {
@@ -36,7 +44,11 @@ export const SubmittedProposalsView: React.FC = () => {
   } = useApp();
 
   const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
+<<<<<<< HEAD
   const clubProposals = events.filter((e) => e.clubId === myClub.id && e.status !== 'cancelled');
+=======
+  const clubProposals = events.filter((e) => e.clubId === myClub.id);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -68,6 +80,11 @@ export const SubmittedProposalsView: React.FC = () => {
     setEditMaxParticipants(event.maxParticipants || 100);
   };
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const editConflict = editingEvent
     ? detectEventConflicts(
         {
@@ -82,6 +99,10 @@ export const SubmittedProposalsView: React.FC = () => {
       )
     : { hasConflict: false };
 
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const handleSaveRequiredChanges = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
@@ -91,11 +112,20 @@ export const SubmittedProposalsView: React.FC = () => {
       return;
     }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     if (editConflict.hasConflict && editConflict.type === 'venue') {
       alert(editConflict.message);
       return;
     }
 
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     const selectedVenue = venues.find((v) => v.id === editVenueId);
 
     const updates: Partial<CampusEvent> = {
@@ -520,11 +550,21 @@ export const SubmittedProposalsView: React.FC = () => {
                 <select
                   value={editVenueId}
                   onChange={(e) => setEditVenueId(e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100"
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   className={`w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-xl text-xs text-slate-900 dark:text-slate-100 ${
                     editConflict.hasConflict && editConflict.type === 'venue'
                       ? 'border-rose-500 ring-2 ring-rose-400/30'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -532,6 +572,11 @@ export const SubmittedProposalsView: React.FC = () => {
                     </option>
                   ))}
                 </select>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
                 {editConflict.hasConflict && editConflict.type === 'venue' && (
                   <div
@@ -542,6 +587,10 @@ export const SubmittedProposalsView: React.FC = () => {
                     <span>{editConflict.message}</span>
                   </div>
                 )}
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               </div>
 
               {/* Short Description */}

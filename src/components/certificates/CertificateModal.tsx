@@ -149,6 +149,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
   };
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in">
       <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto sm:my-6 max-h-[96dvh] flex flex-col">
         
@@ -162,11 +163,30 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+=======
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
+        
+        {/* Controls Bar (hidden during print) */}
+        <div className="p-4 bg-slate-900 text-white flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-400" />
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Verified Student Certificate • {certificate.certificateNumber}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             {/* Primary Save as PDF Button */}
             <button
               onClick={handleDownloadPdf}
               disabled={isGeneratingPdf}
+<<<<<<< HEAD
               className={`px-3 sm:px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+=======
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 downloadSuccess
                   ? 'bg-emerald-600 text-white'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -185,7 +205,11 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
               ) : (
                 <>
                   <Download className="w-3.5 h-3.5" />
+<<<<<<< HEAD
                   <span>Save as PDF</span>
+=======
+                  <span>Print / Save as PDF</span>
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 </>
               )}
             </button>
@@ -194,7 +218,11 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             <button
               onClick={handlePrint}
               title="Print directly"
+<<<<<<< HEAD
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors border border-slate-700 cursor-pointer"
+=======
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors border border-slate-700"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             >
               <Printer className="w-4 h-4" />
             </button>
@@ -202,15 +230,20 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             {/* Close Button */}
             <button
               onClick={onClose}
+<<<<<<< HEAD
               className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
               title="Close"
               aria-label="Close modal"
+=======
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Scrollable Container for Certificate */}
         <div className="flex-1 overflow-x-auto overflow-y-auto p-2 sm:p-4">
           {/* High-res Printable Certificate Canvas */}
@@ -218,6 +251,13 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             ref={certificateRef}
             className="p-6 sm:p-12 bg-[#fffdfa] text-slate-900 relative overflow-hidden flex flex-col items-center text-center justify-between min-h-[460px] sm:min-h-[500px] min-w-[500px] sm:min-w-0 border-8 border-double border-amber-800/30 rounded-2xl shadow-inner mx-auto"
           >
+=======
+        {/* High-res Printable Certificate Canvas */}
+        <div
+          ref={certificateRef}
+          className="p-6 sm:p-12 bg-[#fffdfa] text-slate-900 relative overflow-hidden flex flex-col items-center text-center justify-between min-h-[500px] border-8 border-double border-amber-800/30 m-3 sm:m-6 rounded-2xl shadow-inner"
+        >
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           {/* Watermark Crest */}
           <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
             <Award className="w-96 h-96 text-amber-900" />
@@ -292,7 +332,10 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
           </div>
 
         </div>
+<<<<<<< HEAD
         </div>
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
       </div>
     </div>

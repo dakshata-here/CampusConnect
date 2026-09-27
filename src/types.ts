@@ -6,7 +6,10 @@ export interface User {
   email: string;
   enrollmentNumber?: string;
   role: UserRole;
+<<<<<<< HEAD
   leadType?: 'student' | 'faculty';
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   department: string;
   year?: string; // 'FE' | 'SE' | 'TE' | 'BE' or '1st Year' | '2nd Year' etc.
   clubId?: string; // For president and subhead
@@ -79,7 +82,10 @@ export interface CampusEvent {
   registrationDeadline?: string;
   maxParticipants: number;
   currentRegistrations: number;
+<<<<<<< HEAD
   meetingLink?: string;
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   
   // Additional info
   eligibility: string;

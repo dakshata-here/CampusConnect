@@ -41,7 +41,11 @@ export const PresidentDashboard: React.FC = () => {
   } = useApp();
 
   const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
+<<<<<<< HEAD
   const clubEvents = events.filter((e) => e.clubId === myClub.id && e.status !== 'cancelled');
+=======
+  const clubEvents = events.filter((e) => e.clubId === myClub.id);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   // Local state for requesting changes on an approved event
   const [changeModalEvent, setChangeModalEvent] = useState<CampusEvent | null>(null);
@@ -96,6 +100,7 @@ export const PresidentDashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+<<<<<<< HEAD
                 {currentUser.leadType === 'faculty' || currentUser.year === 'Faculty Coordinator'
                   ? 'Faculty Lead Portal'
                   : 'President Portal'}
@@ -104,6 +109,12 @@ export const PresidentDashboard: React.FC = () => {
                 {currentUser.leadType === 'faculty' || currentUser.year === 'Faculty Coordinator'
                   ? 'Faculty Lead'
                   : 'Official Lead'}
+=======
+                President Portal
+              </span>
+              <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 text-[10px] font-bold border border-blue-100 dark:border-blue-900">
+                Official Lead
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
@@ -292,8 +303,17 @@ export const PresidentDashboard: React.FC = () => {
                   date: evt.date,
                   startTime: evt.startTime,
                   endTime: evt.endTime,
+<<<<<<< HEAD
                   venueId: evt.venueId,
                   venueName: evt.venueName
+=======
+<<<<<<< HEAD
+                  venueId: evt.venueId
+=======
+                  venueId: evt.venueId,
+                  venueName: evt.venueName
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 },
                 events
               );
@@ -355,8 +375,18 @@ export const PresidentDashboard: React.FC = () => {
                     )}
 
                     {conflict.hasConflict && (
+<<<<<<< HEAD
                       <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 flex items-center gap-1.5 font-medium">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+=======
+<<<<<<< HEAD
+                      <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+=======
+                      <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 flex items-center gap-1.5 font-medium">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                         <span className="truncate">{conflict.message}</span>
                       </div>
                     )}
@@ -396,6 +426,7 @@ export const PresidentDashboard: React.FC = () => {
         </div>
 
         <div className="dashboard-card rounded-xl border overflow-hidden">
+<<<<<<< HEAD
           {clubEvents.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
               No active or published events for this club.
@@ -403,6 +434,10 @@ export const PresidentDashboard: React.FC = () => {
           ) : (
             <div className="divide-y divide-blue-100/70 dark:divide-slate-800">
               {clubEvents.map((evt) => (
+=======
+          <div className="divide-y divide-blue-100/70 dark:divide-slate-800">
+            {clubEvents.map((evt) => (
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               <div
                 key={evt.id}
                 className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-sky-50/50 dark:hover:bg-slate-800/40 transition-colors"
@@ -470,8 +505,12 @@ export const PresidentDashboard: React.FC = () => {
                 </div>
               </div>
             ))}
+<<<<<<< HEAD
             </div>
           )}
+=======
+          </div>
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
         </div>
       </div>
 

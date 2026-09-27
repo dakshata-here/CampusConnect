@@ -23,8 +23,12 @@ import {
   Mail,
   FileCheck,
   Edit3,
+<<<<<<< HEAD
   Trash2,
   Video
+=======
+  Trash2
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 } from 'lucide-react';
 import {
   formatFullDate,
@@ -64,8 +68,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
   const [regError, setRegError] = useState('');
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+<<<<<<< HEAD
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+=======
+<<<<<<< HEAD
+=======
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   // Reschedule form state
   const [newDate, setNewDate] = useState(event.date);
@@ -113,6 +125,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     setShowRescheduleForm(false);
   };
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const handleConfirmCancel = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     cancelEvent(event.id, cancelReason.trim() || 'Event cancelled by organizer');
@@ -120,13 +137,21 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     onClose();
   };
 
+<<<<<<< HEAD
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150">
       <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto sm:my-6 max-h-[96dvh] flex flex-col">
+=======
+>>>>>>> eff49e3 (First commit)
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
         
         {/* Close Button */}
         <button
           onClick={onClose}
+<<<<<<< HEAD
           className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-colors cursor-pointer"
           title="Close modal"
           aria-label="Close modal"
@@ -136,6 +161,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
         {/* Hero Poster Banner */}
         <div className="relative h-40 sm:h-64 md:h-72 w-full bg-slate-950 shrink-0">
+=======
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md flex items-center justify-center transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Hero Poster Banner */}
+        <div className="relative h-64 sm:h-72 w-full bg-slate-950">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           <img
             src={event.posterUrl}
             alt={event.title}
@@ -144,15 +178,24 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
           {/* Top category badges */}
+<<<<<<< HEAD
           <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <span className="bg-indigo-600 text-white font-bold text-xs px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow">
+=======
+          <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
+            <span className="bg-indigo-600 text-white font-bold text-xs px-3 py-1 rounded-full shadow">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               {event.eventType}
             </span>
             <StatusBadge status={event.status} size="sm" />
           </div>
 
           {/* Banner bottom info */}
+<<<<<<< HEAD
           <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 text-white">
+=======
+          <div className="absolute bottom-4 left-4 right-4 text-white">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             <div className="flex items-center gap-2 text-xs text-indigo-300 font-semibold mb-1">
               {event.clubLogo ? (
                 <img src={event.clubLogo} alt={event.clubName} className="w-4 h-4 rounded-full" />
@@ -161,14 +204,22 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
               )}
               <span>{event.clubName || event.organizerName}</span>
             </div>
+<<<<<<< HEAD
             <h1 className="text-base sm:text-2xl font-extrabold text-white leading-tight">
+=======
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               {event.title}
             </h1>
           </div>
         </div>
 
         {/* Modal Body Container */}
+<<<<<<< HEAD
         <div className="p-3.5 sm:p-6 md:p-8 space-y-5 sm:space-y-6 flex-1 overflow-y-auto overscroll-contain">
+=======
+        <div className="p-5 sm:p-8 space-y-6 max-h-[calc(85vh-18rem)] overflow-y-auto">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           
           {/* Rescheduled Notice Banner if applicable */}
           {event.rescheduledHistory && (
@@ -356,6 +407,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Online Meeting Link */}
           {event.meetingLink && (
             <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -384,6 +436,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             </div>
           )}
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           {/* Registration Box / QR Pass section */}
           {event.registrationRequired && (
             <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-50 via-slate-50 to-blue-50 dark:from-indigo-950/40 dark:via-slate-900 dark:to-blue-950/30 border border-indigo-200/80 dark:border-indigo-900/60 shadow-md space-y-4">
@@ -589,7 +643,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                   Organizer & Admin Actions
                 </span>
 
+<<<<<<< HEAD
                 <div className="flex items-center gap-2 flex-wrap">
+=======
+                <div className="flex items-center gap-2">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   {canReview && (
                     <button
                       onClick={() => {
@@ -609,6 +667,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     {showRescheduleForm ? 'Cancel Reschedule' : 'Reschedule Event'}
                   </button>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                  <button
+                    onClick={() => {
+                      const reason = prompt('Please enter cancellation reason for this event:');
+                      if (reason) {
+                        cancelEvent(event.id, reason);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 font-semibold text-xs transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Cancel Event
+                  </button>
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   {event.status !== 'cancelled' ? (
                     <button
                       onClick={() => {
@@ -625,6 +700,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                       Event Cancelled
                     </span>
                   )}
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 </div>
               </div>
 
@@ -709,6 +788,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                   </div>
                 </form>
               )}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
               {/* Cancel Confirmation Inline Form */}
               {showCancelForm && (
@@ -756,6 +840,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                   </div>
                 </form>
               )}
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             </div>
           )}
 

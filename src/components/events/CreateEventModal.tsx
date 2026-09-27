@@ -20,8 +20,12 @@ import {
   QrCode,
   Trash2,
   ExternalLink,
+<<<<<<< HEAD
   Check,
   Video
+=======
+  Check
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 } from 'lucide-react';
 
 interface CreateEventModalProps {
@@ -61,10 +65,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
   const [endTime, setEndTime] = useState('13:00');
   const [venueId, setVenueId] = useState(venues[0]?.id || 'venue_auditorium');
 
+<<<<<<< HEAD
   // Registration & Meeting Link
   const [step3Option, setStep3Option] = useState<'registration' | 'meeting'>('registration');
   const [meetingLink, setMeetingLink] = useState('');
   const [registrationRequired, setRegistrationRequired] = useState(true);
+=======
+  // Registration
+  const [registrationRequired, setRegistrationRequired] = useState(true);
+  const [registrationMethod, setRegistrationMethod] = useState<'qr' | 'link'>('qr');
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const [registrationLink, setRegistrationLink] = useState('');
   const [registrationQrUrl, setRegistrationQrUrl] = useState('');
   const [qrFileName, setQrFileName] = useState('');
@@ -170,6 +180,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
     }
   };
 
+<<<<<<< HEAD
   const handlePasteMeetingLink = async () => {
     try {
       const clipText = await navigator.clipboard.readText();
@@ -185,6 +196,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
     }
   };
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   // Additional Details
   const [eligibility, setEligibility] = useState('Open to all engineering students across all branches and years.');
   const [requiredMaterials, setRequiredMaterials] = useState('College ID card and laptops with charging adapters.');
@@ -200,8 +213,17 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       date,
       startTime,
       endTime,
+<<<<<<< HEAD
       venueId,
       venueName: selectedVenue?.name
+=======
+<<<<<<< HEAD
+      venueId
+=======
+      venueId,
+      venueName: selectedVenue?.name
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     },
     events
   );
@@ -212,18 +234,35 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       return;
     }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     if (conflict.hasConflict) {
       alert(conflict.message);
       return;
     }
 
+<<<<<<< HEAD
     if (step3Option === 'meeting' && !asDraft) {
       if (!meetingLink.trim()) {
         alert('Please paste and provide the meeting link.');
+=======
+>>>>>>> eff49e3 (First commit)
+    if (registrationRequired && !asDraft) {
+      if (registrationMethod === 'qr' && !registrationQrUrl.trim()) {
+        alert('Please upload a QR code image or provide a QR image URL.');
+        return;
+      }
+      if (registrationMethod === 'link' && !registrationLink.trim()) {
+        alert('Please paste and upload the registration link.');
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
         return;
       }
     }
 
+<<<<<<< HEAD
     const regType =
       step3Option === 'meeting'
         ? 'link'
@@ -233,6 +272,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
         ? 'link'
         : 'internal';
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     const newEvt = createEventProposal({
       title,
       eventType,
@@ -246,6 +287,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       endTime,
       venueId,
       venueName: selectedVenue?.name || 'College Hall',
+<<<<<<< HEAD
       registrationRequired: step3Option === 'registration' ? registrationRequired : false,
       registrationType: regType,
       registrationLink:
@@ -259,6 +301,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
       registrationDeadline: step3Option === 'registration' && registrationRequired ? registrationDeadline : undefined,
       maxParticipants: step3Option === 'registration' && registrationRequired ? Number(maxParticipants) : 150,
       meetingLink: step3Option === 'meeting' ? meetingLink.trim() : (meetingLink.trim() || undefined),
+=======
+      registrationRequired,
+      registrationType: registrationMethod,
+      registrationLink: registrationMethod === 'link' ? registrationLink.trim() : undefined,
+      registrationQrUrl: registrationMethod === 'qr' ? registrationQrUrl.trim() : undefined,
+      registrationDeadline,
+      maxParticipants: Number(maxParticipants),
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       eligibility,
       requiredMaterials,
       instructions,
@@ -276,6 +326,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
   };
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150">
       <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto sm:my-6 max-h-[96dvh] flex flex-col">
         
@@ -288,11 +339,29 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
               </span>
               <div className="min-w-0">
                 <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 truncate">
+=======
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
+        
+        {/* Header */}
+        <div className="p-5 sm:p-6 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-indigo-600 text-white shadow-sm">
+                <Calendar className="w-5 h-5" />
+              </span>
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   {currentUser.role === 'college_admin'
                     ? 'Publish Academic / College Event'
                     : 'Submit Club Event Proposal'}
                 </h2>
+<<<<<<< HEAD
                 <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-1 sm:line-clamp-none">
+=======
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   {currentUser.role === 'college_admin'
                     ? 'Fill event details and publish directly to calendar.'
                     : 'Proposals are submitted to College Admin for approval before appearing on the campus calendar.'}
@@ -303,18 +372,42 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
 
           <button
             onClick={onClose}
+<<<<<<< HEAD
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700 transition-colors shrink-0 cursor-pointer"
             aria-label="Close modal"
+=======
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700 transition-colors"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
+<<<<<<< HEAD
         <div className="p-3.5 sm:p-6 md:p-8 space-y-6 flex-1 overflow-y-auto overscroll-contain">
           
           {/* Real-time Conflict Alert Box */}
           {conflict.hasConflict && (
+=======
+        <div className="p-5 sm:p-8 space-y-8 max-h-[calc(85vh-9rem)] overflow-y-auto">
+          
+          {/* Real-time Conflict Alert Box */}
+          {conflict.hasConflict && (
+<<<<<<< HEAD
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 animate-bounce" />
+              <div className="space-y-1 text-xs">
+                <div className="font-extrabold text-amber-900 dark:text-amber-200">
+                  {conflict.type === 'venue' ? '⚠️ Venue Conflict Detected' : '⚠️ Schedule Warning'}
+                </div>
+                <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                  {conflict.message}
+                </p>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Tip: Change the venue or adjust start/end times to avoid overlapping with "{conflict.conflictingEvent?.title}".
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             <div
               role="alert"
               className="p-4 rounded-2xl border flex items-start gap-3 bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800"
@@ -329,6 +422,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                 </p>
                 <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
                   Please select a different venue or adjust the event date/time.
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 </div>
               </div>
             </div>
@@ -669,11 +766,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                 <select
                   value={venueId}
                   onChange={(e) => setVenueId(e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                  className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-medium"
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                   className={`w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 p-2.5 rounded-xl border text-xs font-medium transition-colors ${
                     conflict.hasConflict && conflict.type === 'venue'
                       ? 'border-rose-500 dark:border-rose-500 ring-2 ring-rose-400/30'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -681,6 +788,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                     </option>
                   ))}
                 </select>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
                 {/* Venue Conflict Error Message right below the dropdown */}
                 {conflict.hasConflict && conflict.type === 'venue' && (
@@ -693,6 +805,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                   </div>
                 )}
 
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 {selectedVenue && (
                   <div className="mt-1.5 flex items-center gap-2 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
                     <span className="font-semibold text-indigo-600 dark:text-indigo-400">Facilities:</span>
@@ -707,6 +823,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Section 3: Registration Settings & Meeting Link */}
           <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
             <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
@@ -973,11 +1090,131 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                       )}
                     </div>
 
+=======
+          {/* Section 3: Registration Rules */}
+          <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+              <Users className="w-4 h-4" />
+              3. Registration Settings
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="regReq"
+                  checked={registrationRequired}
+                  onChange={(e) => setRegistrationRequired(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="regReq" className="font-bold text-slate-700 dark:text-slate-300">
+                  Registration Required?
+                </label>
+              </div>
+
+              {registrationRequired && (
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Registration Method
+                  </label>
+                  <select
+                    value={registrationMethod}
+                    onChange={(e) => setRegistrationMethod(e.target.value as 'qr' | 'link')}
+                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold focus:ring-2 focus:ring-indigo-500 text-xs"
+                  >
+                    <option value="qr">Upload QR</option>
+                    <option value="link">Upload Link</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Upload QR Mode */}
+              {registrationRequired && registrationMethod === 'qr' && (
+                <div className="sm:col-span-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span>Registration QR Code *</span>
+                    </div>
+
+                    {/* Mode Toggle: Upload Image vs QR URL */}
+                    <div className="flex items-center p-0.5 rounded-lg bg-slate-200/70 dark:bg-slate-700/60 text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setQrInputMode('upload')}
+                        className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                          qrInputMode === 'upload'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <Upload className="w-3 h-3" />
+                        <span>Upload QR Image</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQrInputMode('url')}
+                        className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                          qrInputMode === 'url'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <LinkIcon className="w-3 h-3" />
+                        <span>QR Image URL</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {qrInputMode === 'upload' ? (
+                    <div>
+                      <input
+                        ref={qrFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQrFileUpload}
+                        className="hidden"
+                      />
+                      <div
+                        onClick={() => qrFileInputRef.current?.click()}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file && file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === 'string') {
+                                setRegistrationQrUrl(reader.result);
+                                setQrFileName(file.name);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white/60 dark:bg-slate-900/40 hover:bg-indigo-50/20"
+                      >
+                        <QrCode className="w-7 h-7 mx-auto text-indigo-500 mb-1.5" />
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Click to upload QR code image or drag & drop here
+                        </p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                          PNG, JPG, SVG of event registration QR code (UPI, Google Form, WhatsApp group)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
                         <LinkIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                           type="url"
+<<<<<<< HEAD
                           placeholder="Paste or enter registration link (e.g. Google Form, Devfolio, Unstop)..."
                           value={registrationLink}
                           onChange={(e) => setRegistrationLink(e.target.value)}
@@ -1109,6 +1346,155 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
                 </p>
               </div>
             )}
+=======
+                          placeholder="Paste image URL of the QR code (e.g. https://.../qr.png)..."
+                          value={registrationQrUrl.startsWith('data:') ? '' : registrationQrUrl}
+                          onChange={(e) => {
+                            setRegistrationQrUrl(e.target.value);
+                            setQrFileName('');
+                          }}
+                          className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePasteQrUrl}
+                        className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                      >
+                        Paste QR URL
+                      </button>
+                    </div>
+                  )}
+
+                  {/* QR Image Live Preview */}
+                  {registrationQrUrl && (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-white rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs">
+                          <img
+                            src={registrationQrUrl}
+                            alt="QR Code Preview"
+                            className="w-16 h-16 object-contain rounded"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>QR Code Attached Successfully</span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-xs sm:max-w-sm mt-0.5">
+                            {qrFileName || (registrationQrUrl.startsWith('data:') ? 'Uploaded Image File' : registrationQrUrl)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRegistrationQrUrl('');
+                          setQrFileName('');
+                        }}
+                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                        title="Remove QR Code"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upload Link Mode */}
+              {registrationRequired && registrationMethod === 'link' && (
+                <div className="sm:col-span-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                      <LinkIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>Registration Link *</span>
+                    </label>
+                    {registrationLink && (
+                      <a
+                        href={registrationLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <span>Test Link</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <LinkIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="url"
+                        placeholder="Paste or enter registration link (e.g. Google Form, Devfolio, Unstop)..."
+                        value={registrationLink}
+                        onChange={(e) => setRegistrationLink(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePasteRegistrationLink}
+                      className="py-2.5 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs hover:shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Link</span>
+                    </button>
+                  </div>
+
+                  {registrationLink && (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[11px]">
+                      <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 truncate">
+                        <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span className="font-semibold">Uploaded Link:</span>
+                        <span className="truncate font-mono">{registrationLink}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationLink('')}
+                        className="text-rose-500 hover:text-rose-700 ml-2 shrink-0 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {registrationRequired && (
+                <>
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Max Participants / Seats
+                    </label>
+                    <input
+                      type="number"
+                      value={maxParticipants}
+                      onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                      className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Registration Deadline
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={registrationDeadline}
+                      onChange={(e) => setRegistrationDeadline(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           </div>
 
           {/* Section 4: Eligibility & Contact */}
@@ -1180,20 +1566,36 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
         </div>
 
         {/* Footer Buttons */}
+<<<<<<< HEAD
         <div className="p-3.5 sm:p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
             className="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer text-center"
+=======
+        <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700 rounded-xl transition-colors"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           >
             Cancel
           </button>
 
+<<<<<<< HEAD
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => handleSubmit(true)}
               className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 rounded-xl transition-colors shadow-xs cursor-pointer text-center"
+=======
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 rounded-xl transition-colors shadow-xs"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             >
               Save Draft
             </button>
@@ -1201,10 +1603,17 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose }) =
             <button
               type="button"
               onClick={() => handleSubmit(false)}
+<<<<<<< HEAD
               className="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-center"
             >
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span className="truncate">
+=======
+              className="px-6 py-2.5 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 {currentUser.role === 'college_admin'
                   ? 'Publish Event Directly'
                   : "Submit for Admin's Approval"}

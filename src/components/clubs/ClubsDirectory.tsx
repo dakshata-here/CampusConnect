@@ -27,7 +27,11 @@ export const ClubsDirectory: React.FC = () => {
   );
 
   const activeClub = clubs.find((c) => c.id === selectedClubId);
+<<<<<<< HEAD
   const clubEvents = events.filter((e) => e.clubId === selectedClubId && e.status !== 'draft' && e.status !== 'cancelled');
+=======
+  const clubEvents = events.filter((e) => e.clubId === selectedClubId && e.status !== 'draft');
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   return (
     <div className="space-y-8">
@@ -59,7 +63,11 @@ export const ClubsDirectory: React.FC = () => {
       {/* Clubs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredClubs.map((club) => {
+<<<<<<< HEAD
            const clubEvtCount = events.filter((e) => e.clubId === club.id && e.status !== 'draft' && e.status !== 'cancelled').length;
+=======
+          const clubEvtCount = events.filter((e) => e.clubId === club.id && e.status !== 'draft').length;
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           return (
             <div
               key={club.id}

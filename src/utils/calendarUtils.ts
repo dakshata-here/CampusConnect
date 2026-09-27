@@ -56,6 +56,11 @@ export function isTimeOverlapping(
   if (date1 !== date2) return false;
   // Convert 'HH:MM' to total minutes from midnight
   const toMinutes = (t: string) => {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     if (!t) return 0;
     const match = t.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
     if (match) {
@@ -66,6 +71,10 @@ export function isTimeOverlapping(
       if (ampm === 'AM' && h === 12) h = 0;
       return h * 60 + m;
     }
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     const [h, m] = t.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
   };
@@ -75,13 +84,30 @@ export function isTimeOverlapping(
   const s2 = toMinutes(start2);
   const e2 = toMinutes(end2);
 
+<<<<<<< HEAD
   // Exact same start or overlapping time intervals
   if (s1 === s2) return true;
+=======
+<<<<<<< HEAD
+  // Overlaps if start of one is before end of other and vice versa
+=======
+  // Exact same start or overlapping time intervals
+  if (s1 === s2) return true;
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   return Math.max(s1, s2) < Math.min(e1, e2);
 }
 
 /**
+<<<<<<< HEAD
  * Detect venue conflicts against existing events approved by the admin
+=======
+<<<<<<< HEAD
+ * Detect both venue conflicts and time conflicts against existing approved/published events
+=======
+ * Detect venue conflicts against existing events approved by the admin
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
  */
 export function detectEventConflicts(
   target: {
@@ -89,6 +115,16 @@ export function detectEventConflicts(
     date: string;
     startTime: string;
     endTime: string;
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    venueId: string;
+  },
+  existingEvents: CampusEvent[]
+): ConflictCheckResult {
+  const activeEvents = existingEvents.filter(
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     venueId?: string;
     venueName?: string;
   },
@@ -96,12 +132,29 @@ export function detectEventConflicts(
 ): ConflictCheckResult {
   // Only check against events approved by the admin
   const approvedEvents = existingEvents.filter(
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     (e) =>
       e.id !== target.id &&
       (e.status === 'approved' || e.status === 'published' || e.status === 'registration_open') &&
       e.date === target.date
   );
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  // 1. Check for venue clash (same venue + overlapping time)
+  const venueClash = activeEvents.find(
+    (e) =>
+      e.venueId === target.venueId &&
+      isTimeOverlapping(target.date, target.startTime, target.endTime, e.date, e.startTime, e.endTime)
+  );
+
+  if (venueClash) {
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   // Check for same venue + same date + overlapping/matching time
   const venueClash = approvedEvents.find((e) => {
     const isSameVenue =
@@ -120,15 +173,46 @@ export function detectEventConflicts(
       ? rawClub
       : `${rawClub} club`;
 
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     return {
       hasConflict: true,
       type: 'venue',
       conflictingEvent: venueClash,
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+      message: `Venue Conflict: "${venueClash.venueName}" is already reserved for "${venueClash.title}" from ${formatDisplayTime(venueClash.startTime)} to ${formatDisplayTime(venueClash.endTime)}.`
+    };
+  }
+
+  // 2. Check for general schedule overlap (same time, different venue)
+  const scheduleOverlap = activeEvents.find((e) =>
+    isTimeOverlapping(target.date, target.startTime, target.endTime, e.date, e.startTime, e.endTime)
+  );
+
+  if (scheduleOverlap) {
+    return {
+      hasConflict: true,
+      type: 'time',
+      conflictingEvent: scheduleOverlap,
+      message: `Schedule Warning: Event overlaps with "${scheduleOverlap.title}" (${formatDisplayTime(scheduleOverlap.startTime)} – ${formatDisplayTime(scheduleOverlap.endTime)} at ${scheduleOverlap.venueName}).`
+    };
+  }
+
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       message: `It is Booked for same date and time by ${clubFormatted}`
     };
   }
 
   // If no venue match with an approved event, no conflict/warning
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   return { hasConflict: false };
 }
 

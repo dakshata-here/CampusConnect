@@ -15,8 +15,12 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+<<<<<<< HEAD
   Filter,
   Plus
+=======
+  Filter
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 } from 'lucide-react';
 import { formatDisplayDate, formatDisplayTime, calculateTimeRemaining } from '../../utils/calendarUtils';
 
@@ -29,8 +33,12 @@ export const StudentDashboard: React.FC = () => {
     certificates,
     setSelectedEventForModal,
     setActiveTab,
+<<<<<<< HEAD
     setSelectedCertificate,
     setIsCreateEventOpen
+=======
+    setSelectedCertificate
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   } = useApp();
 
   const [filterType, setFilterType] = useState<string>('all');
@@ -57,12 +65,18 @@ export const StudentDashboard: React.FC = () => {
   ).length;
 
   // Filtered upcoming public events
+<<<<<<< HEAD
   const publishedEvents = events.filter(
     (e) => ['published', 'approved', 'registration_open'].includes(e.status) && e.status !== 'cancelled'
   );
   
   const filteredEvents = publishedEvents.filter((e) => {
     if (e.status === 'cancelled') return false;
+=======
+  const publishedEvents = events.filter((e) => ['published', 'approved', 'registration_open'].includes(e.status));
+  
+  const filteredEvents = publishedEvents.filter((e) => {
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     if (filterType === 'all') return true;
     if (filterType === 'hackathons') return ['Hackathon', 'Ideathon', 'Competition'].includes(e.eventType);
     if (filterType === 'workshops') return ['Workshop', 'SIG Session', 'Technical Event'].includes(e.eventType);
@@ -70,7 +84,11 @@ export const StudentDashboard: React.FC = () => {
     return true;
   });
 
+<<<<<<< HEAD
   const featuredEvents = events.filter((e) => (e.isDontMiss || e.currentRegistrations > 100) && e.status !== 'cancelled');
+=======
+  const featuredEvents = events.filter((e) => e.isDontMiss || e.currentRegistrations > 100);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   return (
     <div className="space-y-8">
@@ -87,6 +105,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+<<<<<<< HEAD
           {currentUser.leadType === 'faculty' || currentUser.role === 'president' || currentUser.year === 'Faculty Coordinator' ? (
             <button
               onClick={() => setIsCreateEventOpen(true)}
@@ -104,6 +123,15 @@ export const StudentDashboard: React.FC = () => {
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
+=======
+          <button
+            onClick={() => setActiveTab('events')}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
+          >
+            <span>Explore Events</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           <button
             onClick={() => setActiveTab('calendar')}
             className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors flex items-center gap-1.5"

@@ -35,8 +35,13 @@ html.dark ::selection {
 
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
+<<<<<<< HEAD
   width: 6px;
   height: 6px;
+=======
+  width: 8px;
+  height: 8px;
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 }
 
 ::-webkit-scrollbar-track {
@@ -60,6 +65,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: #38bdf8;
 }
 
+<<<<<<< HEAD
 /* Mobile & touch optimizations */
 * {
   -webkit-tap-highlight-color: transparent;
@@ -71,6 +77,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 /* Dashboard Cards & Blocks:
    - Bright Mode: attractive shade of light Blue + white
    - Dark Mode: blue box shadow for the border of all boxes

@@ -26,7 +26,11 @@ export const SubheadDashboard: React.FC = () => {
   } = useApp();
 
   const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
+<<<<<<< HEAD
   const myProposals = events.filter((e) => (e.createdBy === currentUser.id || e.clubId === myClub.id) && e.status !== 'cancelled');
+=======
+  const myProposals = events.filter((e) => e.createdBy === currentUser.id || e.clubId === myClub.id);
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 
   const pendingCount = myProposals.filter((e) => e.status === 'pending_approval').length;
   const approvedCount = myProposals.filter((e) => ['approved', 'published', 'registration_open'].includes(e.status)).length;

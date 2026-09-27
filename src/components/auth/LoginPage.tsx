@@ -1,6 +1,16 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { UserRole, User as AppUser } from '../../types';
+=======
+<<<<<<< HEAD
+import React, { useState } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+>>>>>>> eff49e3 (First commit)
+import { useApp } from '../../context/AppContext';
+import { UserRole } from '../../types';
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
 import brightCampusBg from '../../assets/images/bright-campus.jpg';
 import darkCampusBg from '../../assets/images/dark-campus.jpg';
 import {
@@ -46,10 +56,20 @@ export const DEFAULT_ADMIN_ANSWERS: Record<string, string> = {
 
 export const LoginPage: React.FC = () => {
   const {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    loginUser,
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     currentUser,
     allUsers,
     loginUser,
     setCurrentUser,
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     registerUser,
     submitRegistrationRequest,
     registrationRequests,
@@ -72,22 +92,45 @@ export const LoginPage: React.FC = () => {
   const [studentCaptchaChecked, setStudentCaptchaChecked] = useState(false);
   const [studentCaptchaLoading, setStudentCaptchaLoading] = useState(false);
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  // Lead Login Fields (Student/Faculty selector + ID + Club ID + Password + Captcha)
+  const [leadUserType, setLeadUserType] = useState<'student' | 'faculty'>('student');
+  const [leadStudentPrn, setLeadStudentPrn] = useState('C2K2210012');
+  const [leadFacultyId, setLeadFacultyId] = useState('PICT-FAC-401');
+  const [leadClubId, setLeadClubId] = useState('ACM26001');
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   // Lead Login Fields (Student/Faculty selector + ID + Club + Password + Captcha)
   const [leadUserType, setLeadUserType] = useState<'student' | 'faculty'>('student');
   const [leadStudentPrn, setLeadStudentPrn] = useState('C2K2210012');
   const [leadFacultyId, setLeadFacultyId] = useState('PICT-FAC-401');
   const [leadClub, setLeadClub] = useState(clubs[0]?.name || 'PICT ACM Student Chapter');
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   const [leadPassword, setLeadPassword] = useState('Lead@2026');
   const [leadShowPassword, setLeadShowPassword] = useState(false);
   const [leadCaptchaChecked, setLeadCaptchaChecked] = useState(false);
   const [leadCaptchaLoading, setLeadCaptchaLoading] = useState(false);
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   useEffect(() => {
     if (!leadClub && clubs.length > 0) {
       setLeadClub(clubs[0].name);
     }
   }, [clubs, leadClub]);
 
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   // Admin Login Fields (Faculty ID + Password + 2-Step Security Verification + Captcha)
   const [adminFacultyId, setAdminFacultyId] = useState('PICT-ADM-108');
   const [adminPassword, setAdminPassword] = useState('PictAdmin@2026');
@@ -295,8 +338,18 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+<<<<<<< HEAD
     if (!leadClub.trim()) {
       setErrorMessage('Please select your club from the dropdown.');
+=======
+<<<<<<< HEAD
+    if (!leadClubId.trim()) {
+      setErrorMessage('Please enter your Club ID (e.g. ACM26001).');
+=======
+    if (!leadClub.trim()) {
+      setErrorMessage('Please select your club from the dropdown.');
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
       return;
     }
 
@@ -305,6 +358,7 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+<<<<<<< HEAD
     const selectedClubObj = clubs.find((c) => c.name === leadClub || c.id === leadClub) || clubs[0];
 
     const matchedUser = allUsers.find(
@@ -365,6 +419,38 @@ export const LoginPage: React.FC = () => {
 
     setCurrentUser(targetUser);
     setActiveTab('dashboard');
+=======
+    let success = loginUser(idToUse, 'president');
+    if (!success) {
+      success = loginUser(idToUse, 'subhead');
+    }
+    if (success) {
+<<<<<<< HEAD
+=======
+      if (leadClub) {
+        const selectedClubObj = clubs.find((c) => c.name === leadClub || c.id === leadClub);
+        if (selectedClubObj) {
+          const target =
+            allUsers.find(
+              (u) =>
+                (u.role === 'president' || u.role === 'subhead') &&
+                (u.email.toLowerCase() === idToUse.toLowerCase() ||
+                  (u.enrollmentNumber && u.enrollmentNumber.toLowerCase() === idToUse.toLowerCase()))
+            ) || currentUser;
+
+          setCurrentUser({
+            ...target,
+            clubId: selectedClubObj.id,
+            clubName: selectedClubObj.name
+          });
+        }
+      }
+>>>>>>> eff49e3 (First commit)
+      setActiveTab('dashboard');
+    } else {
+      setErrorMessage('Invalid club coordinator credentials.');
+    }
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
   };
 
   // 3. ADMIN LOGIN SUBMISSION (Employee ID + Password + Two-Step Verification)
@@ -637,6 +723,7 @@ export const LoginPage: React.FC = () => {
 
       {/* Top Header Bar */}
       <header className="bg-white/85 dark:bg-[#070b14]/85 backdrop-blur-md border-b border-sky-100/80 dark:border-sky-950/70 sticky top-0 z-30 shadow-xs dark:shadow-md dark:shadow-black/50 transition-colors">
+<<<<<<< HEAD
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-md shadow-sky-500/25 shrink-0">
@@ -652,16 +739,41 @@ export const LoginPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-1 sm:line-clamp-none">
+=======
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-sky-500/25">
+              P
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 tracking-tight">
+                  Pune Institute of Computer Technology
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 hidden md:inline">
+                  CampusConnect
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 Official Campus Events & Academic Activities Network
               </p>
             </div>
           </div>
 
+<<<<<<< HEAD
           <div className="flex items-center gap-2 shrink-0">
             {/* Bright / Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0a0f1d] text-xs font-semibold text-slate-700 dark:text-sky-200 hover:bg-sky-50/80 dark:hover:bg-[#10182c] transition-colors shadow-xs cursor-pointer"
+=======
+          <div className="flex items-center gap-2.5">
+            {/* Bright / Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0a0f1d] text-xs font-semibold text-slate-700 dark:text-sky-200 hover:bg-sky-50/80 dark:hover:bg-[#10182c] transition-colors shadow-xs cursor-pointer"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
               title={isDarkMode ? 'Switch to Bright Light Mode' : 'Switch to Dark Mode'}
             >
               {isDarkMode ? (
@@ -681,14 +793,22 @@ export const LoginPage: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
+<<<<<<< HEAD
       <main className="flex-1 flex items-center justify-center p-3 sm:p-6 lg:p-8 relative z-10 py-4 sm:py-8">
+=======
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative z-10">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
         <div className="w-full flex items-center justify-center">
 
           {/* ========================================================================= */}
           {/* VIEW 1: SIGN IN CARD (Role tabs: Student, Club Lead, Admin + New Registration button below) */}
           {/* ========================================================================= */}
           {viewMode === 'login' && (
+<<<<<<< HEAD
             <div className="w-full max-w-md bg-white/70 dark:bg-[#060b18]/65 rounded-2xl border border-white/80 dark:border-sky-500/30 p-4 sm:p-8 shadow-[0_20px_50px_-12px_rgba(2,132,199,0.25),0_10px_25px_-5px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(56,189,248,0.2),0_0_0_1px_rgba(56,189,248,0.2)_inset] space-y-5 sm:space-y-6 transition-all backdrop-blur-xl backdrop-saturate-150 shrink-0">
+=======
+            <div className="w-full max-w-md bg-white/70 dark:bg-[#060b18]/65 rounded-2xl border border-white/80 dark:border-sky-500/30 p-6 sm:p-8 shadow-[0_20px_50px_-12px_rgba(2,132,199,0.25),0_10px_25px_-5px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(56,189,248,0.2),0_0_0_1px_rgba(56,189,248,0.2)_inset] space-y-6 transition-all backdrop-blur-xl backdrop-saturate-150 shrink-0">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             {/* Top Title & Header */}
             <div className="text-center space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50/80 dark:bg-sky-950/60 backdrop-blur-xs border border-sky-200/90 dark:border-sky-800/80 text-sky-700 dark:text-sky-300 text-xs font-semibold">
@@ -927,6 +1047,35 @@ export const LoginPage: React.FC = () => {
                   </div>
                 )}
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                {/* Club ID */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Club ID *
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Format: [Club][Year][Count]
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <Shield className="w-4 h-4 text-sky-500/80 dark:text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={leadClubId}
+                      onChange={(e) => setLeadClubId(e.target.value)}
+                      placeholder="e.g. ACM26001 or IEEE26001"
+                      className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 font-mono uppercase"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Ex: For ACM club in 2026 for lead #1, enter <span className="font-semibold text-sky-600 dark:text-sky-300">ACM26001</span>
+                  </p>
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 {/* Club */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -947,6 +1096,10 @@ export const LoginPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 </div>
 
                 {/* Password */}
@@ -1176,7 +1329,11 @@ export const LoginPage: React.FC = () => {
         {/* VIEW 2: NEW REGISTRATION TEMPLATE */}
         {/* ========================================================================= */}
         {viewMode === 'register' && (
+<<<<<<< HEAD
           <div className="w-full max-w-xl bg-white/70 dark:bg-[#060b18]/65 rounded-2xl border border-white/80 dark:border-sky-500/30 p-4 sm:p-8 shadow-[0_20px_50px_-12px_rgba(2,132,199,0.25),0_10px_25px_-5px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(56,189,248,0.2),0_0_0_1px_rgba(56,189,248,0.2)_inset] space-y-5 transition-all backdrop-blur-xl backdrop-saturate-150 shrink-0">
+=======
+          <div className="w-full max-w-xl bg-white/70 dark:bg-[#060b18]/65 rounded-2xl border border-white/80 dark:border-sky-500/30 p-6 sm:p-8 shadow-[0_20px_50px_-12px_rgba(2,132,199,0.25),0_10px_25px_-5px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(56,189,248,0.2),0_0_0_1px_rgba(56,189,248,0.2)_inset] space-y-5 transition-all backdrop-blur-xl backdrop-saturate-150 shrink-0">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             {/* Header & Back Link */}
             <div className="flex items-center justify-between border-b border-sky-100 dark:border-sky-950/80 pb-4">
               <button

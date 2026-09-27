@@ -60,8 +60,17 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
       date: !isAdmin && isChangesRequested ? editDate : event.date,
       startTime: !isAdmin && isChangesRequested ? editStartTime : event.startTime,
       endTime: !isAdmin && isChangesRequested ? editEndTime : event.endTime,
+<<<<<<< HEAD
       venueId: !isAdmin && isChangesRequested ? editVenueId : event.venueId,
       venueName: !isAdmin && isChangesRequested ? venues.find((v) => v.id === editVenueId)?.name : event.venueName
+=======
+<<<<<<< HEAD
+      venueId: !isAdmin && isChangesRequested ? editVenueId : event.venueId
+=======
+      venueId: !isAdmin && isChangesRequested ? editVenueId : event.venueId,
+      venueName: !isAdmin && isChangesRequested ? venues.find((v) => v.id === editVenueId)?.name : event.venueName
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
     },
     events
   );
@@ -125,12 +134,21 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
   };
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150">
       <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto sm:my-6 max-h-[96dvh] flex flex-col">
         
         {/* Header */}
         <div
           className={`p-4 sm:p-6 border-b flex items-center justify-between shrink-0 ${
+=======
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-6">
+        
+        {/* Header */}
+        <div
+          className={`p-5 sm:p-6 border-b flex items-center justify-between ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             isAdmin
               ? 'bg-purple-500/10 dark:bg-purple-950/30 border-purple-200/80 dark:border-purple-900/60'
               : 'bg-amber-500/10 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-900/60'
@@ -138,7 +156,11 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
         >
           <div className="flex items-center gap-2.5">
             <span
+<<<<<<< HEAD
               className={`p-2 rounded-xl text-white shadow-sm shrink-0 ${
+=======
+              className={`p-2 rounded-xl text-white shadow-sm ${
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 isAdmin ? 'bg-purple-600' : 'bg-amber-500'
               }`}
             >
@@ -148,13 +170,22 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
                 <Calendar className="w-5 h-5" />
               )}
             </span>
+<<<<<<< HEAD
             <div className="min-w-0">
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100 truncate">
+=======
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 {isAdmin
                   ? 'College Admin Approval Review Desk'
                   : 'Event Proposal Status & Review'}
               </h2>
+<<<<<<< HEAD
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+=======
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 Submitted by{' '}
                 <span className="font-bold text-indigo-600 dark:text-indigo-400">
                   {event.createdByName}
@@ -166,14 +197,22 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
 
           <button
             onClick={onClose}
+<<<<<<< HEAD
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+=======
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
+<<<<<<< HEAD
         <div className="p-4 sm:p-6 md:p-8 space-y-6 flex-1 overflow-y-auto overscroll-contain">
+=======
+        <div className="p-5 sm:p-8 space-y-6 max-h-[calc(85vh-14rem)] overflow-y-auto">
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
           
           {/* Status Banner for Club Lead */}
           {!isAdmin && event.status === 'pending_approval' && (
@@ -239,6 +278,18 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
 
           {/* Conflict Warning Box */}
           {conflict.hasConflict && (
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <div className="font-extrabold text-amber-900 dark:text-amber-200">
+                  {conflict.type === 'venue' ? '⚠️ Venue Overlap Conflict' : '⚠️ Time Overlap Warning'}
+                </div>
+                <div className="text-amber-800 dark:text-amber-300">{conflict.message}</div>
+=======
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
             <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
@@ -246,6 +297,10 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
                   ⚠️ Venue Conflict
                 </div>
                 <div className="text-rose-800 dark:text-rose-300 font-bold">{conflict.message}</div>
+<<<<<<< HEAD
+=======
+>>>>>>> eff49e3 (First commit)
+>>>>>>> d12c6a247154b5f6471d667099e1904960e1e783
                 {isAdmin && (
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     As College Admin, you can "Request Changes" to ask the club lead to adjust the venue or time, or override and approve.
