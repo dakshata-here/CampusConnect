@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({academicYear:{type:String,required:true,default:""},semester:{type:String,default:""},termCommencementDate:{type:Date,default:null},termConclusionDate:{type:Date,default:null},examinationWindowStart:{type:Date,default:null},examinationWindowEnd:{type:Date,default:null},proposalPermissions:{clubLeadsCanPropose:{type:Boolean,default:true},requireAdminApproval:{type:Boolean,default:true}},maintenanceMode:{type:Boolean,default:false},notificationSettings:{approvals:{type:Boolean,default:true},eventUpdates:{type:Boolean,default:true},reminders:{type:Boolean,default:true}}},{timestamps:true});
+module.exports=mongoose.model("SystemSettings",schema);

@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({eventId:{type:mongoose.Schema.Types.ObjectId,ref:"Event",required:true,index:true},studentId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true,index:true},studentEnrollment:{type:String,required:true,trim:true},teamName:{type:String,default:"",trim:true},registrationDate:{type:Date,default:Date.now},attendanceStatus:{type:String,enum:["REGISTERED","ATTENDED","NOT_ATTENDED"],default:"REGISTERED"},attendedAt:{type:Date,default:null}},{timestamps:true});
+schema.index({eventId:1,studentId:1},{unique:true}); module.exports=mongoose.model("EventRegistration",schema);

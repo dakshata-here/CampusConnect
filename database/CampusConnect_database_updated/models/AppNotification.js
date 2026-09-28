@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({userId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true,index:true},userRole:{type:String,enum:["STUDENT","FACULTY","ADMIN","CLUB_LEAD"],default:null},title:{type:String,required:true,trim:true},message:{type:String,required:true},type:{type:String,enum:["EVENT_APPROVAL","EVENT_UPDATE","EVENT_CANCELLATION","REGISTRATION","REMINDER","REQUEST_STATUS","GENERAL"],required:true},eventId:{type:mongoose.Schema.Types.ObjectId,ref:"Event",default:null},isRead:{type:Boolean,default:false},readAt:{type:Date,default:null}},{timestamps:true});
+module.exports=mongoose.model("AppNotification",schema);

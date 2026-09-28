@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({eventId:{type:mongoose.Schema.Types.ObjectId,ref:"Event",required:true,index:true},changedBy:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true},action:{type:String,enum:["CREATED","UPDATED","SUBMITTED","APPROVED","REJECTED","CHANGES_REQUESTED","OVERRIDDEN","RESCHEDULED","CANCELLED","COMPLETED"],required:true},previousStatus:{type:String,default:""},newStatus:{type:String,default:""},comments:{type:String,default:""},changedFields:{type:mongoose.Schema.Types.Mixed,default:{}}},{timestamps:true});
+module.exports=mongoose.model("EventHistory",schema);

@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({title:{type:String,required:true,trim:true},type:{type:String,enum:["NOTICE","EXAM","DEADLINE","HOLIDAY","CIRCULAR"],required:true},description:{type:String,default:""},departmentId:{type:mongoose.Schema.Types.ObjectId,ref:"Department",default:null},date:{type:Date,required:true},endDate:{type:Date,default:null},priority:{type:String,enum:["LOW","NORMAL","HIGH","URGENT"],default:"NORMAL"},isUrgent:{type:Boolean,default:false},showInCalendar:{type:Boolean,default:true},fileAttachmentUrl:{type:String,default:""},isPublished:{type:Boolean,default:true}},{timestamps:true});
+module.exports=mongoose.model("AcademicEvent",schema);

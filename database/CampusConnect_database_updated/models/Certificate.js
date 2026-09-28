@@ -1,0 +1,3 @@
+const mongoose=require("mongoose");
+const schema=new mongoose.Schema({registrationId:{type:mongoose.Schema.Types.ObjectId,ref:"EventRegistration",required:true,unique:true},eventId:{type:mongoose.Schema.Types.ObjectId,ref:"Event",required:true,index:true},studentId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true,index:true},enrollmentNumber:{type:String,required:true,trim:true},certificateNumber:{type:String,required:true,unique:true,trim:true},issueDate:{type:Date,default:Date.now},certificateFileUrl:{type:String,required:true},verificationUrl:{type:String,default:""}},{timestamps:true});
+module.exports=mongoose.model("Certificate",schema);
