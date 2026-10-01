@@ -1,4 +1,3 @@
-=======
 # College Calendar Backend Database
 
 MongoDB + Mongoose database layer for the Centralized College Calendar and Club Management System.
