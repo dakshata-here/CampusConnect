@@ -21,7 +21,8 @@ import {
   Edit3,
   Send,
   X,
-  Mail
+  Mail,
+  Download
 } from 'lucide-react';
 import { formatDisplayDate, formatDisplayTime, detectEventConflicts } from '../../utils/calendarUtils';
 
@@ -46,6 +47,125 @@ export const PresidentDashboard: React.FC = () => {
   // Local state for requesting changes on an approved event
   const [changeModalEvent, setChangeModalEvent] = useState<CampusEvent | null>(null);
   const [changeReason, setChangeReason] = useState<string>('');
+  const [downloadingEventId, setDownloadingEventId] = useState<string | null>(null);
+
+  const handleDownloadRegistrations = async (evt: CampusEvent) => {
+    setDownloadingEventId(evt.id);
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+      const response = await fetch(`/api/events/${evt.id}/registrations/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }).catch(() => null);
+
+      const contentType = response?.headers?.get('content-type') || '';
+
+      if (response && response.ok && !contentType.includes('text/html')) {
+        const blob = await response.blob();
+        const csvBlob = new Blob([blob], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(csvBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        const filenameHeader = response.headers.get('content-disposition');
+        let filename = `Event_${evt.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`;
+        if (filenameHeader && filenameHeader.includes('filename=')) {
+          const match = filenameHeader.match(/filename="?([^";]+)"?/);
+          if (match && match[1]) {
+            filename = match[1].trim();
+          }
+        }
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        const eventRegs = registrations.filter((r) => r.eventId === evt.id);
+        const escapeCsv = (val: any): string => {
+          if (val === null || val === undefined) return '""';
+          let str = String(val).trim();
+          if (/^[=+\-@]/.test(str)) str = `'${str}`;
+          return `"${str.replace(/"/g, '""')}"`;
+        };
+        const headers = [
+          'Student Name',
+          'PRN / Enrollment Number',
+          'Email',
+          'Department',
+          'Year',
+          'Phone',
+          'Team Name',
+          'Registration Date'
+        ];
+        const rows = eventRegs.map((r) =>
+          [
+            escapeCsv(r.studentName),
+            escapeCsv(r.studentEnrollment),
+            escapeCsv(r.studentEmail),
+            escapeCsv(r.department),
+            escapeCsv(r.year),
+            escapeCsv(r.phone),
+            escapeCsv(r.teamName || ''),
+            escapeCsv(r.registrationDate)
+          ].join(',')
+        );
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Event_${evt.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Failed to download registration documentation', err);
+    } finally {
+      setDownloadingEventId(null);
+    }
+  };
+
+  const [downloadingPdfEventId, setDownloadingPdfEventId] = useState<string | null>(null);
+
+  const handleDownloadRegistrationsPdf = async (evt: CampusEvent) => {
+    setDownloadingPdfEventId(evt.id);
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+      const response = await fetch(`/api/events/${evt.id}/registrations/download/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response && response.ok && !contentType.includes('text/html') && contentType.includes('application/pdf')) {
+        const blob = await response.blob();
+        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        const filenameHeader = response.headers.get('content-disposition');
+        let filename = `CampusConnect_${evt.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.pdf`;
+        if (filenameHeader && filenameHeader.includes('filename=')) {
+          const match = filenameHeader.match(/filename="?([^";]+)"?/);
+          if (match && match[1]) {
+            filename = match[1].trim();
+          }
+        }
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error('Failed to download PDF registration documentation: invalid response or unauthorized', response?.status);
+      }
+    } catch (err) {
+      console.error('Failed to download registration PDF documentation', err);
+    } finally {
+      setDownloadingPdfEventId(null);
+    }
+  };
 
   // Status breakdown
   const pendingProposals = clubEvents.filter(
@@ -460,6 +580,27 @@ export const PresidentDashboard: React.FC = () => {
                       <span>Re-submit to Admin</span>
                     </button>
                   )}
+
+                  {/* Download Registered Students Documentation */}
+                  <button
+                    onClick={() => handleDownloadRegistrations(evt)}
+                    disabled={downloadingEventId === evt.id}
+                    title="Download Registered Students CSV"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1 shadow-xs disabled:opacity-50"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span>{downloadingEventId === evt.id ? 'CSV...' : 'Download CSV'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDownloadRegistrationsPdf(evt)}
+                    disabled={downloadingPdfEventId === evt.id}
+                    title="Download Registered Students PDF"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1 shadow-xs disabled:opacity-50"
+                  >
+                    <Download className="w-3.5 h-3.5 text-red-600" />
+                    <span>{downloadingPdfEventId === evt.id ? 'PDF...' : 'Download PDF'}</span>
+                  </button>
 
                   <button
                     onClick={() => setSelectedEventForModal(evt)}

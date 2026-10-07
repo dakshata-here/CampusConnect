@@ -1,12 +1,14 @@
 import { Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { Event, EventCategory, EventStatus, RegistrationMethod } from '../models/Event.js';
+import { EventRegistration } from '../models/EventRegistration.js';
 import { Approval, ApprovalAction } from '../models/Approval.js';
 import { Club } from '../models/Club.js';
 import { Venue } from '../models/Venue.js';
 import { UserRole } from '../models/User.js';
 import { isAuthorizedLeadOrAdmin } from './clubMembership.controller.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { generateEventRegistrationsPdf } from '../utils/registrationPdfService.js';
 
 /**
  * POST /api/events
@@ -1012,4 +1014,364 @@ export const getEventApprovals = async (
     next(error);
   }
 };
+
+/**
+ * Helper to escape CSV values and protect against CSV formula injection.
+ */
+const escapeCsvValue = (val: any): string => {
+  if (val === null || val === undefined) return '""';
+  let str = String(val).trim();
+  // Formula injection protection: if value starts with =, +, -, @, prepend a single quote
+  if (/^[=+\-@]/.test(str)) {
+    str = `'${str}`;
+  }
+  // Escape double quotes by doubling them
+  return `"${str.replace(/"/g, '""')}"`;
+};
+
+/**
+ * GET /api/events/:id/registrations
+ * Access: College Admin OR President (Active LEAD of the event's club)
+ * Returns the list of registered students for a particular event.
+ * STRICTLY REGISTRATION ONLY - NO ATTENDANCE DATA.
+ */
+export const getEventRegistrations = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format.'
+      });
+      return;
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: 'Event not found.'
+      });
+      return;
+    }
+
+    // Role & Authorization Check
+    if (user.role === UserRole.STUDENT) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Students are not authorized to view event registration records.'
+      });
+      return;
+    }
+
+    if (user.role === UserRole.CLUB_PRESIDENT) {
+      if (!event.clubId) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. Presidents cannot access event registrations for events without an associated club.'
+        });
+        return;
+      }
+
+      const isLead = await isAuthorizedLeadOrAdmin(req, event.clubId);
+      if (!isLead) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. You are not an active lead of this club.'
+        });
+        return;
+      }
+    } else if (user.role !== UserRole.COLLEGE_ADMIN) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Unauthorized access.'
+      });
+      return;
+    }
+
+    const registrations = await EventRegistration.find({ eventId: event._id })
+      .populate('studentId', 'name email enrollmentNumber department year phone')
+      .sort({ registrationDate: 1, createdAt: 1 });
+
+    const sanitizedRegistrations = registrations.map((reg) => {
+      const studentUser = reg.studentId as any;
+      return {
+        id: reg.id,
+        eventId: reg.eventId,
+        studentId: studentUser?._id ? studentUser._id.toString() : reg.studentId.toString(),
+        studentName: studentUser?.name || '',
+        studentEmail: studentUser?.email || '',
+        studentEnrollment: reg.studentEnrollment || studentUser?.enrollmentNumber || '',
+        department: studentUser?.department || '',
+        year: studentUser?.year || '',
+        phone: studentUser?.phone || '',
+        teamName: reg.teamName || '',
+        registrationDate: reg.registrationDate
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      count: sanitizedRegistrations.length,
+      eventId: event.id,
+      eventTitle: event.title,
+      registrations: sanitizedRegistrations
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/events/:id/registrations/download
+ * Access: College Admin OR President (Active LEAD of the event's club)
+ * Downloads the registered students documentation for a particular event as CSV.
+ * STRICTLY REGISTRATION ONLY - NO ATTENDANCE DATA.
+ */
+export const downloadEventRegistrationsDocumentation = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format.'
+      });
+      return;
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: 'Event not found.'
+      });
+      return;
+    }
+
+    // Role & Authorization Check
+    if (user.role === UserRole.STUDENT) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Students are not authorized to download event registration documentation.'
+      });
+      return;
+    }
+
+    if (user.role === UserRole.CLUB_PRESIDENT) {
+      if (!event.clubId) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. Presidents cannot download event registrations for events without an associated club.'
+        });
+        return;
+      }
+
+      const isLead = await isAuthorizedLeadOrAdmin(req, event.clubId);
+      if (!isLead) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. You are not an active lead of this club.'
+        });
+        return;
+      }
+    } else if (user.role !== UserRole.COLLEGE_ADMIN) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Unauthorized access.'
+      });
+      return;
+    }
+
+    const registrations = await EventRegistration.find({ eventId: event._id })
+      .populate('studentId', 'name email enrollmentNumber department year phone')
+      .sort({ registrationDate: 1, createdAt: 1 });
+
+    const headers = [
+      'Student Name',
+      'PRN / Enrollment Number',
+      'Email',
+      'Department',
+      'Year',
+      'Phone',
+      'Team Name',
+      'Registration Date'
+    ];
+
+    const rows = registrations.map((reg) => {
+      const studentUser = reg.studentId as any;
+      const name = studentUser?.name || '';
+      const enrollment = reg.studentEnrollment || studentUser?.enrollmentNumber || '';
+      const email = studentUser?.email || '';
+      const department = studentUser?.department || '';
+      const year = studentUser?.year || '';
+      const phone = studentUser?.phone || '';
+      const teamName = reg.teamName || '';
+      const regDate = reg.registrationDate ? new Date(reg.registrationDate).toISOString() : '';
+
+      return [
+        escapeCsvValue(name),
+        escapeCsvValue(enrollment),
+        escapeCsvValue(email),
+        escapeCsvValue(department),
+        escapeCsvValue(year),
+        escapeCsvValue(phone),
+        escapeCsvValue(teamName),
+        escapeCsvValue(regDate)
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+
+    const sanitizedTitle = event.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `Event_${sanitizedTitle}_Registered_Students_${timestamp}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/events/:id/registrations/download/pdf
+ * Access: College Admin OR President (Active LEAD of the event's club)
+ * Downloads the registered students documentation for a particular event as PDF.
+ * STRICTLY REGISTRATION ONLY - NO ATTENDANCE DATA.
+ */
+export const downloadEventRegistrationsPdfDocumentation = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format.'
+      });
+      return;
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: 'Event not found.'
+      });
+      return;
+    }
+
+    // Role & Authorization Check
+    if (user.role === UserRole.STUDENT) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Students are not authorized to download event registration documentation.'
+      });
+      return;
+    }
+
+    if (user.role === UserRole.CLUB_PRESIDENT) {
+      if (!event.clubId) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. Presidents cannot download event registrations for events without an associated club.'
+        });
+        return;
+      }
+
+      const isLead = await isAuthorizedLeadOrAdmin(req, event.clubId);
+      if (!isLead) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden. You are not an active lead of this club.'
+        });
+        return;
+      }
+    } else if (user.role !== UserRole.COLLEGE_ADMIN) {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden. Unauthorized access.'
+      });
+      return;
+    }
+
+    // Retrieve registrations
+    const registrations = await EventRegistration.find({ eventId: event._id })
+      .populate('studentId', 'name email enrollmentNumber department year phone')
+      .sort({ registrationDate: 1, createdAt: 1 });
+
+    let clubName = 'College / Department';
+    if (event.clubId) {
+      const club = await Club.findById(event.clubId);
+      if (club) clubName = club.name;
+    }
+
+    let venueName = 'On Campus / TBD';
+    if (event.venueId) {
+      const venue = await Venue.findById(event.venueId);
+      if (venue) venueName = venue.name;
+    }
+
+    const sanitizedTitle = event.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `CampusConnect_${sanitizedTitle}_Registered_Students.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    const pdfDoc = generateEventRegistrationsPdf({
+      event,
+      clubName,
+      venueName,
+      registrations
+    });
+
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 

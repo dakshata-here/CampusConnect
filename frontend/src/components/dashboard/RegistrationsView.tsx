@@ -131,22 +131,154 @@ export const RegistrationsView: React.FC = () => {
     setIsEmailModalOpen(false);
   };
 
-  const handleExportCSV = () => {
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [downloadError, setDownloadError] = useState<string>('');
+
+  const escapeCsv = (val: any): string => {
+    if (val === null || val === undefined) return '""';
+    let str = String(val).trim();
+    if (/^[=+\-@]/.test(str)) {
+      str = `'${str}`;
+    }
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
+  const handleExportCSV = async () => {
     if (!activeEvent || eventRegistrations.length === 0) return;
 
-    const headers = ['Name,Email,Roll/PRN,Department,Year,Phone,RegistrationDate,Status'];
-    const rows = eventRegistrations.map(
-      (r) =>
-        `"${r.studentName}","${r.studentEmail}","${r.studentEnrollment}","${r.department}","${r.year}","${r.phone}","${r.registrationDate}","${r.attendanceStatus}"`
-    );
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${activeEvent.title.replace(/\s+/g, '_')}_Registrations.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsDownloading(true);
+    setDownloadError('');
+
+    try {
+      // Try backend endpoint if accessible
+      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+      const response = await fetch(`/api/events/${activeEvent.id}/registrations/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }).catch(() => null);
+
+      const contentType = response?.headers?.get('content-type') || '';
+
+      if (response && response.ok && !contentType.includes('text/html')) {
+        const blob = await response.blob();
+        const csvBlob = new Blob([blob], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(csvBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        const filenameHeader = response.headers.get('content-disposition');
+        let filename = `Event_${activeEvent.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`;
+        if (filenameHeader && filenameHeader.includes('filename=')) {
+          const match = filenameHeader.match(/filename="?([^";]+)"?/);
+          if (match && match[1]) {
+            filename = match[1].trim();
+          }
+        }
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        // If unauthorized on backend, surface the error
+        if (response && (response.status === 401 || response.status === 403)) {
+          const errorData = await response.json().catch(() => null);
+          setDownloadError(errorData?.message || 'Unauthorized to download event registration documentation.');
+          return;
+        }
+
+        // Safe local generation fallback strictly matching documentation specifications
+        const headers = [
+          'Student Name',
+          'PRN / Enrollment Number',
+          'Email',
+          'Department',
+          'Year',
+          'Phone',
+          'Team Name',
+          'Registration Date'
+        ];
+        const rows = eventRegistrations.map((r) =>
+          [
+            escapeCsv(r.studentName),
+            escapeCsv(r.studentEnrollment),
+            escapeCsv(r.studentEmail),
+            escapeCsv(r.department),
+            escapeCsv(r.year),
+            escapeCsv(r.phone),
+            escapeCsv(r.teamName || ''),
+            escapeCsv(r.registrationDate)
+          ].join(',')
+        );
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Event_${activeEvent.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err: any) {
+      console.error('Failed to export CSV', err);
+      setDownloadError('Failed to generate CSV registration documentation. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!activeEvent) return;
+
+    setIsDownloadingPdf(true);
+    setDownloadError('');
+
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+      const response = await fetch(`/api/events/${activeEvent.id}/registrations/download/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response.ok && !contentType.includes('text/html') && contentType.includes('application/pdf')) {
+        const blob = await response.blob();
+        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        const filenameHeader = response.headers.get('content-disposition');
+        let filename = `CampusConnect_${activeEvent.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.pdf`;
+        if (filenameHeader && filenameHeader.includes('filename=')) {
+          const match = filenameHeader.match(/filename="?([^";]+)"?/);
+          if (match && match[1]) {
+            filename = match[1].trim();
+          }
+        }
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        if (response.status === 401) {
+          setDownloadError('Authentication required. Please log in to download documentation.');
+        } else if (response.status === 403) {
+          setDownloadError('Forbidden. You are not authorized to download this event documentation.');
+        } else if (response.status === 404) {
+          setDownloadError('Event not found or registration records unavailable.');
+        } else {
+          setDownloadError('Failed to download PDF registration documentation.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to download registration PDF', err);
+      setDownloadError('Failed to generate PDF registration documentation. Please try again.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
@@ -156,15 +288,15 @@ export const RegistrationsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800">
-              {myClub.shortName} Attendee Registry
+              {myClub.shortName} Registration Records
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Live Participant Database</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Registered Students Documentation</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-            Event Registrations & Participant Mailer
+            Registered Students Documentation
           </h1>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Click on any event card below (e.g. <strong>"Hello"</strong> or <strong>"Happy Diwali"</strong>) to inspect registered students and dispatch broadcast emails.
+            View registered students and download registration documentation for your club events.
           </p>
         </div>
 
@@ -172,11 +304,20 @@ export const RegistrationsView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              disabled={eventRegistrations.length === 0}
+              disabled={eventRegistrations.length === 0 || isDownloading}
               className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-blue-200 dark:border-slate-700 shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5 text-blue-600" />
-              <span>Export CSV</span>
+              <span>{isDownloading ? 'Preparing CSV...' : 'Download CSV'}</span>
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              disabled={eventRegistrations.length === 0 || isDownloadingPdf}
+              className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-blue-200 dark:border-slate-700 shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5 text-red-600" />
+              <span>{isDownloadingPdf ? 'Preparing PDF...' : 'Download PDF'}</span>
             </button>
 
             <button
@@ -190,6 +331,13 @@ export const RegistrationsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {downloadError && (
+        <div className="p-3 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{downloadError}</span>
+        </div>
+      )}
 
       {/* ================= SECTION 1: SEPARATE CARDS FOR EACH EVENT ================= */}
       <div className="space-y-3">

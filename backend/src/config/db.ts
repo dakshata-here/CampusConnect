@@ -1,7 +1,16 @@
+import dns from 'node:dns';
 import mongoose from 'mongoose';
 
 export const connectDB = async (uri?: string): Promise<void> => {
   const mongoUri = uri || process.env.MONGODB_URI || 'mongodb://localhost:27017/campusconnect';
+
+  if (mongoUri.startsWith('mongodb+srv://')) {
+    try {
+      dns.setServers(['8.8.8.8', '8.8.4.4']);
+    } catch (err) {
+      console.warn('[Database] Warning: Failed to set custom DNS servers:', err);
+    }
+  }
 
   try {
     const conn = await mongoose.connect(mongoUri);

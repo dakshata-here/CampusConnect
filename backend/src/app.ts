@@ -4,6 +4,10 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import clubRoutes from './routes/club.routes.js';
 import eventRoutes from './routes/event.routes.js';
+import registrationRoutes from './routes/registration.routes.js';
+import venueRoutes from './routes/venue.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import certificateRoutes from './routes/certificate.routes.js';
 
 export const createApp = () => {
   const app = express();
@@ -51,6 +55,10 @@ export const createApp = () => {
   app.use('/api/users', userRoutes);
   app.use('/api/clubs', clubRoutes);
   app.use('/api/events', eventRoutes);
+  app.use('/api/registrations', registrationRoutes);
+  app.use('/api/venues', venueRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/certificates', certificateRoutes);
 
   // 404 handler for unknown routes
   app.use((_req: Request, res: Response) => {

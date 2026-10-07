@@ -8,7 +8,10 @@ import {
   approveEvent,
   rejectEvent,
   requestChangesEvent,
-  getEventApprovals
+  getEventApprovals,
+  getEventRegistrations,
+  downloadEventRegistrationsDocumentation,
+  downloadEventRegistrationsPdfDocumentation
 } from '../controllers/event.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/role.middleware.js';
@@ -104,5 +107,43 @@ router.patch(
  */
 router.get('/:id/approvals', requireAuth, getEventApprovals);
 
+// ==========================================
+// Registered Students Documentation Routes
+// ==========================================
+
+/**
+ * 10. GET /api/events/:id/registrations
+ * Access: College Admin OR President (Active Club Lead of the event's club)
+ */
+router.get(
+  '/:id/registrations',
+  requireAuth,
+  requireRole(UserRole.COLLEGE_ADMIN, UserRole.CLUB_PRESIDENT),
+  getEventRegistrations
+);
+
+/**
+ * 11. GET /api/events/:id/registrations/download
+ * Access: College Admin OR President (Active Club Lead of the event's club)
+ */
+router.get(
+  '/:id/registrations/download',
+  requireAuth,
+  requireRole(UserRole.COLLEGE_ADMIN, UserRole.CLUB_PRESIDENT),
+  downloadEventRegistrationsDocumentation
+);
+
+/**
+ * 12. GET /api/events/:id/registrations/download/pdf
+ * Access: College Admin OR President (Active Club Lead of the event's club)
+ */
+router.get(
+  '/:id/registrations/download/pdf',
+  requireAuth,
+  requireRole(UserRole.COLLEGE_ADMIN, UserRole.CLUB_PRESIDENT),
+  downloadEventRegistrationsPdfDocumentation
+);
+
 export default router;
+
 
