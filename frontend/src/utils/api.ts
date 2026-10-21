@@ -9,6 +9,10 @@ import {
   PopulatedVenue
 } from '../types';
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || ''
+).replace(/\/$/, '');
+
 const TOKEN_KEY = 'campusconnect_token';
 const FALLBACK_TOKEN_KEY = 'token';
 
@@ -38,7 +42,9 @@ export async function apiFetch<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${path}`;
+
   const headers: Record<string, string> = {
     ...getAuthHeaders(),
     ...(options.headers as Record<string, string> || {})
@@ -57,6 +63,7 @@ export async function apiFetch<T = any>(
 
   const contentType = response.headers.get('content-type') || '';
   let data: any = null;
+
   if (contentType.includes('application/json')) {
     data = await response.json();
   } else {
@@ -68,6 +75,7 @@ export async function apiFetch<T = any>(
       (data && typeof data === 'object' && data.message) ||
       (typeof data === 'string' && data) ||
       `Request failed with status ${response.status}`;
+
     const error: any = new Error(errorMessage);
     error.status = response.status;
     error.data = data;
@@ -586,7 +594,7 @@ export async function downloadEventRegistrationsCsv(eventId: string, eventTitle?
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`/api/events/${eventId}/registrations/download`, {
+ const response = await fetch(`/api/events/${eventId}/registrations/download`, {
     method: 'GET',
     headers
   });
@@ -612,7 +620,7 @@ export async function downloadEventRegistrationsPdf(eventId: string, eventTitle?
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`/api/events/${eventId}/registrations/download/pdf`, {
+  const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/registrations/download/pdf`, {
     method: 'GET',
     headers
   });
