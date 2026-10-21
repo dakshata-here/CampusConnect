@@ -42,6 +42,7 @@ import {
   BookmarkCheck,
   Menu
 } from 'lucide-react';
+import { isEventPast } from './utils/calendarUtils';
 
 export function App() {
   const {
@@ -107,9 +108,19 @@ export function App() {
       case 'approved-events':
       case 'events-admin': {
         const publishedEvents = events.filter((e) =>
-          ['published', 'approved', 'registration_open', 'completed'].includes(e.status) && e.status !== 'cancelled'
+          !isEventPast(e) &&
+          ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase()) &&
+          (e.status || '').toLowerCase() !== 'cancelled'
         );
         const filtered = publishedEvents.filter((e) => {
+          if (searchQuery && searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const inTitle = (e.title || '').toLowerCase().includes(q);
+            const inDesc = (e.shortDescription || e.description || '').toLowerCase().includes(q);
+            const inClub = (e.clubName || '').toLowerCase().includes(q);
+            const inType = (e.eventType || '').toLowerCase().includes(q);
+            if (!(inTitle || inDesc || inClub || inType)) return false;
+          }
           if (eventCategoryFilter === 'all') return true;
           if (eventCategoryFilter === 'hackathons')
             return ['Hackathon', 'Ideathon', 'Competition'].includes(e.eventType);

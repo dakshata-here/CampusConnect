@@ -313,7 +313,7 @@ async function runTests() {
         category: EventCategory.CLUB,
         clubId: club1._id.toString(),
         venueId: mainAuditorium._id.toString(),
-        date: '2026-10-20',
+        date: '2026-11-20',
         startTime: '09:00 AM',
         endTime: '06:00 PM',
         shortDescription: 'Join the annual code fest!',

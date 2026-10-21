@@ -9,6 +9,7 @@ import {
 import { UserRole } from '../models/User.js';
 import { isAuthorizedLeadOrAdmin } from './clubMembership.controller.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { isEventPast } from '../utils/eventTimeUtils.js';
 
 /**
  * POST /api/registrations/events/:eventId
@@ -54,6 +55,15 @@ export const registerForEvent = async (
       res.status(400).json({
         success: false,
         message: `Cannot register for this event. Event must be APPROVED (Current status: ${event.status}).`
+      });
+      return;
+    }
+
+    // 1b. Event must not have ended
+    if (isEventPast(event)) {
+      res.status(400).json({
+        success: false,
+        message: 'Cannot register for an event that has already ended.'
       });
       return;
     }

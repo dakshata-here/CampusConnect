@@ -49,6 +49,13 @@ export const createApp = () => {
       timestamp: new Date().toISOString()
     });
   });
+  app.get('/api/health', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'CampusConnect Auth API',
+      timestamp: new Date().toISOString()
+    });
+  });
 
   // Mount Application Routes
   app.use('/api/auth', authRoutes);

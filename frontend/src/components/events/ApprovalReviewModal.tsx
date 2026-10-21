@@ -40,6 +40,8 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
   const [showChangeBox, setShowChangeBox] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectBox, setShowRejectBox] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Club Lead editable states for addressing changes requested
   const [editTitle, setEditTitle] = useState(event.title);
@@ -66,46 +68,69 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
     events
   );
 
-  const handleApprove = () => {
-    approveEvent(event.id);
-    onClose();
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const res = await approveEvent(event.id);
+    setIsSubmitting(false);
+    if (res.success) {
+      onClose();
+    } else {
+      setErrorMessage(res.message || 'Failed to approve event.');
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
-      alert('Please specify a rejection reason.');
+      setErrorMessage('Please specify a rejection reason.');
       return;
     }
-    rejectEvent(event.id, rejectReason);
-    onClose();
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const res = await rejectEvent(event.id, rejectReason.trim());
+    setIsSubmitting(false);
+    if (res.success) {
+      onClose();
+    } else {
+      setErrorMessage(res.message || 'Failed to reject event.');
+    }
   };
 
-  const handleRequestChanges = () => {
+  const handleRequestChanges = async () => {
     if (!changeComment.trim()) {
-      alert('Please enter change instructions for the Club Lead.');
+      setErrorMessage('Please enter change instructions for the Club Lead.');
       return;
     }
-    requestChanges(event.id, changeComment);
-    onClose();
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const res = await requestChanges(event.id, changeComment.trim());
+    setIsSubmitting(false);
+    if (res.success) {
+      onClose();
+    } else {
+      setErrorMessage(res.message || 'Failed to request changes.');
+    }
   };
 
-  const handleResubmit = () => {
+  const handleResubmit = async () => {
     if (!editTitle.trim()) {
-      alert('Please provide an event title.');
+      setErrorMessage('Please provide an event title.');
       return;
     }
     if (!editDate) {
-      alert('Please select a date for the event.');
+      setErrorMessage('Please select a date for the event.');
       return;
     }
     if (editStartTime >= editEndTime) {
-      alert('End time must be after start time.');
+      setErrorMessage('End time must be after start time.');
       return;
     }
 
     const selectedVenue = venues.find((v) => v.id === editVenueId);
 
-    resubmitEventProposal(event.id, {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const res = await resubmitEventProposal(event.id, {
       title: editTitle.trim(),
       date: editDate,
       startTime: editStartTime,
@@ -117,11 +142,13 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
       maxParticipants: Number(editMaxParticipants),
       registrationLink: editRegistrationLink.trim() || undefined
     });
+    setIsSubmitting(false);
 
-    alert(
-      `Your changes for "${editTitle}" have been submitted for Admin's approval! You will be notified once the Admin reviews it.`
-    );
-    onClose();
+    if (res.success) {
+      onClose();
+    } else {
+      setErrorMessage(res.message || 'Failed to resubmit proposal.');
+    }
   };
 
   return (
@@ -175,6 +202,23 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
         {/* Modal Body */}
         <div className="p-4 sm:p-6 md:p-8 space-y-6 flex-1 overflow-y-auto overscroll-contain">
           
+          {/* Error Message Alert */}
+          {errorMessage && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span className="font-semibold break-words">{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-200 text-xs font-bold px-1.5 py-0.5 rounded-md hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Status Banner for Club Lead */}
           {!isAdmin && event.status === 'pending_approval' && (
             <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
@@ -485,16 +529,20 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
               />
               <div className="flex justify-end gap-2">
                 <button
+                  type="button"
+                  disabled={isSubmitting}
                   onClick={() => setShowChangeBox(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400"
+                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
+                  disabled={isSubmitting}
                   onClick={handleRequestChanges}
-                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl shadow-xs"
+                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-xs"
                 >
-                  Send Required Changes to Club Lead
+                  {isSubmitting ? 'Sending Changes...' : 'Send Required Changes to Club Lead'}
                 </button>
               </div>
             </div>
@@ -515,16 +563,20 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
               />
               <div className="flex justify-end gap-2">
                 <button
+                  type="button"
+                  disabled={isSubmitting}
                   onClick={() => setShowRejectBox(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400"
+                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
+                  disabled={isSubmitting}
                   onClick={handleReject}
-                  className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs"
+                  className="px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-xs"
                 >
-                  Confirm Rejection
+                  {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
                 </button>
               </div>
             </div>
@@ -537,11 +589,13 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
           /* College Admin Actions: Approve, Require Changes, Reject */
           <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
             <button
+              type="button"
+              disabled={isSubmitting}
               onClick={() => {
                 setShowRejectBox(true);
                 setShowChangeBox(false);
               }}
-              className="px-4 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <XCircle className="w-4 h-4" />
               <span>Reject Proposal</span>
@@ -549,22 +603,26 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
+                disabled={isSubmitting}
                 onClick={() => {
                   setShowChangeBox(true);
                   setShowRejectBox(false);
                 }}
-                className="px-4 py-2 text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-100/70 dark:bg-orange-950/50 hover:bg-orange-200/80 border border-orange-300/80 dark:border-orange-800 rounded-xl transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-100/70 dark:bg-orange-950/50 hover:bg-orange-200/80 border border-orange-300/80 dark:border-orange-800 disabled:opacity-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Require Changes</span>
               </button>
 
               <button
+                type="button"
+                disabled={isSubmitting}
                 onClick={handleApprove}
-                className="px-5 py-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Approve & Publish to Campus</span>
+                <span>{isSubmitting ? 'Approving...' : 'Approve & Publish to Campus'}</span>
               </button>
             </div>
           </div>
@@ -572,26 +630,31 @@ export const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({ event,
           /* Club Lead with Changes Requested: Re-submit to Admin */
           <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
             <button
+              type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
 
             <button
+              type="button"
+              disabled={isSubmitting}
               onClick={handleResubmit}
-              className="px-6 py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+              className="px-6 py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Re-submit to Admin</span>
+              <span>{isSubmitting ? 'Submitting...' : 'Re-submit to Admin'}</span>
             </button>
           </div>
         ) : (
           /* Club Lead View only: Close button */
           <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
             <button
+              type="button"
               onClick={onClose}
-              className="px-5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Close
             </button>

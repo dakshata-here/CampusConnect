@@ -35,6 +35,26 @@ import {
   DEFAULT_ACADEMIC_NOTICE_IDS
 } from '../data/seedData';
 import confetti from 'canvas-confetti';
+import {
+  getToken,
+  setToken,
+  clearToken,
+  loginApi,
+  getMeApi,
+  fetchEventsApi,
+  createEventApi,
+  updateEventApi,
+  approveEventApi,
+  rejectEventApi,
+  requestChangesApi,
+  cancelEventApi,
+  fetchMyRegistrationsApi,
+  registerForEventApi,
+  cancelRegistrationApi,
+  fetchClubsApi,
+  fetchVenuesApi,
+  registerApi
+} from '../utils/api';
 
 interface AppContextType {
   // Theme
@@ -46,7 +66,13 @@ interface AppContextType {
   setCurrentUser: (user: User) => void;
   allUsers: User[];
   switchUser: (userId: string) => void;
-  loginUser: (identifier: string, role: UserRole) => boolean;
+  loginUser: (
+    identifier: string,
+    role: UserRole,
+    password?: string,
+    securityAnswer?: string,
+    club?: string
+  ) => Promise<{ success: boolean; message?: string }>;
   registerStudent: (data: {
     name: string;
     email: string;
@@ -58,6 +84,7 @@ interface AppContextType {
   registerUser: (data: {
     name: string;
     email: string;
+    password?: string;
     role: UserRole;
     enrollmentNumber: string;
     department: string;
@@ -68,15 +95,24 @@ interface AppContextType {
     securityQuestions?: { question: string; answer: string }[];
   }) => boolean;
   logout: () => void;
+  authToken: string | null;
+
+  // Credential Security & Mandatory Password Change
+  pendingPasswordChange: { user: User; token: string; currentPassword?: string } | null;
+  setPendingPasswordChange: (val: { user: User; token: string; currentPassword?: string } | null) => void;
+  completePasswordChange: (updatedUser: User, newToken: string) => Promise<void>;
 
   // Events
   events: CampusEvent[];
-  createEventProposal: (eventData: Partial<CampusEvent>) => CampusEvent;
+  eventsLoading: boolean;
+  eventsError: string | null;
+  refreshEvents: () => Promise<void>;
+  createEventProposal: (eventData: Partial<CampusEvent>) => Promise<{ success: boolean; event?: CampusEvent; message?: string }>;
   updateEvent: (eventId: string, updates: Partial<CampusEvent>) => void;
-  approveEvent: (eventId: string, reviewerComment?: string) => void;
-  rejectEvent: (eventId: string, reason: string) => void;
-  requestChanges: (eventId: string, comment: string) => void;
-  resubmitEventProposal: (eventId: string, updates: Partial<CampusEvent>) => void;
+  approveEvent: (eventId: string, reviewerComment?: string) => Promise<{ success: boolean; message?: string }>;
+  rejectEvent: (eventId: string, reason: string) => Promise<{ success: boolean; message?: string }>;
+  requestChanges: (eventId: string, comment: string) => Promise<{ success: boolean; message?: string }>;
+  resubmitEventProposal: (eventId: string, updates: Partial<CampusEvent>) => Promise<{ success: boolean; message?: string }>;
   leadRequestChangesOnApproved: (eventId: string, reason: string, updates?: Partial<CampusEvent>) => void;
   rescheduleEvent: (
     eventId: string,
@@ -105,7 +141,10 @@ interface AppContextType {
 
   // Registrations & QR Attendance
   registrations: Registration[];
-  registerForEvent: (eventId: string, teamName?: string, phone?: string) => { success: boolean; message: string; registration?: Registration };
+  registrationsLoading: boolean;
+  registrationsError: string | null;
+  refreshRegistrations: () => Promise<void>;
+  registerForEvent: (eventId: string, teamName?: string, phone?: string) => Promise<{ success: boolean; message: string; registration?: Registration }>;
   cancelRegistration: (registrationId: string) => void;
   markAttendance: (registrationId: string) => boolean;
   markAttendanceByQrCode: (qrString: string) => { success: boolean; message: string; registration?: Registration };
@@ -331,6 +370,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [feedbackTargetEvent, setFeedbackTargetEvent] = useState<CampusEvent | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
+  // Backend Integration State
+  const [eventsLoading, setEventsLoading] = useState<boolean>(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [registrationsLoading, setRegistrationsLoading] = useState<boolean>(false);
+  const [registrationsError, setRegistrationsError] = useState<string | null>(null);
+  const [authToken, setAuthTokenState] = useState<string | null>(() => getToken());
+  const [pendingPasswordChange, setPendingPasswordChange] = useState<{
+    user: User;
+    token: string;
+    currentPassword?: string;
+  } | null>(null);
+
+  const completePasswordChange = async (updatedUser: User, newToken: string) => {
+    setAuthTokenState(newToken);
+    setCurrentUser(updatedUser);
+    setPendingPasswordChange(null);
+    setActiveTab('dashboard');
+    await Promise.allSettled([
+      refreshEvents(),
+      refreshRegistrations(),
+      fetchClubsApi().then(setClubs).catch(() => {}),
+      fetchVenuesApi().then(setVenues).catch(() => {})
+    ]);
+  };
+
+  // Function to refresh events from MongoDB backend
+  const refreshEvents = async () => {
+    const token = getToken();
+    if (!token) {
+      setEvents([]);
+      return;
+    }
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      const backendEvents = await fetchEventsApi();
+      setEvents(backendEvents);
+    } catch (err: any) {
+      console.error('Failed to fetch events from backend:', err);
+      setEventsError(err.message || 'Failed to load events from backend.');
+      setEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  // Function to refresh registrations from MongoDB backend
+  const refreshRegistrations = async () => {
+    const token = getToken();
+    if (!token) {
+      setRegistrations([]);
+      return;
+    }
+    setRegistrationsLoading(true);
+    setRegistrationsError(null);
+    try {
+      const backendRegs = await fetchMyRegistrationsApi();
+      setRegistrations(backendRegs);
+    } catch (err: any) {
+      console.error('Failed to fetch registrations from backend:', err);
+      setRegistrationsError(err.message || 'Failed to load registrations from backend.');
+      setRegistrations([]);
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  };
+
+  // Session restoration on initial page load
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      getMeApi()
+        .then((me) => {
+          if (me) {
+            if (me.mustChangePassword) {
+              setPendingPasswordChange({
+                user: me,
+                token
+              });
+              setActiveTab('login');
+            } else {
+              setCurrentUser(me);
+              setAuthTokenState(token);
+              refreshEvents();
+              refreshRegistrations();
+              fetchClubsApi().then(setClubs).catch(() => {});
+              fetchVenuesApi().then(setVenues).catch(() => {});
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('Session expired or invalid token:', err);
+          clearToken();
+          setAuthTokenState(null);
+        });
+    }
+  }, []);
+
+  // Automatic real-time expiration sync: periodically re-fetch active events and on tab focus
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    // Refresh every 60 seconds to automatically clear expired events
+    const interval = setInterval(() => {
+      refreshEvents();
+    }, 60000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshEvents();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authToken]);
+
   // One-time purge of legacy dummy data stored in localStorage
   useEffect(() => {
     try {
@@ -374,7 +534,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const loginUser = (identifier: string, role: UserRole): boolean => {
+  const loginUser = async (
+    identifier: string,
+    role: UserRole,
+    password?: string,
+    securityAnswer?: string,
+    club?: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    // If password provided, attempt real backend authentication
+    if (password) {
+      try {
+        const normalizedRole =
+          role === 'college_admin'
+            ? 'college_admin'
+            : role === 'president'
+            ? 'president'
+            : 'student';
+        const result = await loginApi({
+          identifier,
+          password,
+          role: normalizedRole,
+          securityAnswer,
+          club
+        });
+
+        if (result.token && result.user) {
+          setAuthTokenState(result.token);
+          if (result.mustChangePassword || result.user.mustChangePassword) {
+            setPendingPasswordChange({
+              user: result.user,
+              token: result.token,
+              currentPassword: password
+            });
+            setActiveTab('login');
+            return { success: true, message: result.message };
+          }
+          setCurrentUser(result.user);
+          setActiveTab('dashboard');
+          await Promise.allSettled([
+            refreshEvents(),
+            refreshRegistrations(),
+            fetchClubsApi().then(setClubs),
+            fetchVenuesApi().then(setVenues)
+          ]);
+          return { success: true, message: result.message };
+        }
+        return { success: false, message: result.message || 'Login failed.' };
+      } catch (err: any) {
+        console.error('Backend login failed:', err);
+        return { success: false, message: err.message || 'Invalid credentials.' };
+      }
+    }
+
+    // Only when no password provided (offline / demo user switch if applicable)
     const found = allUsers.find(
       (u) =>
         u.role === role &&
@@ -384,16 +596,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (found) {
       setCurrentUser(found);
       setActiveTab('dashboard');
-      return true;
+      return { success: true };
     }
-    // Fallback: pick first user with that role
-    const fallback = allUsers.find((u) => u.role === role);
-    if (fallback) {
-      setCurrentUser(fallback);
-      setActiveTab('dashboard');
-      return true;
-    }
-    return false;
+    return { success: false, message: 'User not found.' };
   };
 
   const registerStudent = (data: {
@@ -413,6 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const registerUser = (data: {
     name: string;
     email: string;
+    password?: string;
     role: UserRole;
     enrollmentNumber: string;
     department: string;
@@ -422,6 +628,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clubName?: string;
     securityQuestions?: { question: string; answer: string }[];
   }): boolean => {
+    if (data.password) {
+      const normalizedRole =
+        data.role === 'college_admin'
+          ? 'college_admin'
+          : data.role === 'president'
+          ? 'president'
+          : 'student';
+      registerApi({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: normalizedRole,
+        enrollmentNumber: data.enrollmentNumber,
+        department: data.department,
+        year: data.year,
+        phone: data.phone,
+        clubId: data.clubId,
+        clubName: data.clubName,
+        securityQuestions: data.securityQuestions
+      })
+        .then((res) => {
+          if (res.token) {
+            setAuthTokenState(res.token);
+            refreshEvents();
+            refreshRegistrations();
+          }
+        })
+        .catch((err) => {
+          console.error('Backend registration error:', err);
+        });
+    }
+
     const newUser: User = {
       id: `user_${data.role}_${Date.now()}`,
       name: data.name,
@@ -553,7 +791,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    // Switch to default student or login screen
+    clearToken();
+    setAuthTokenState(null);
+    setEvents([]);
+    setRegistrations([]);
     setCurrentUser(INITIAL_USERS[0]);
     setActiveTab('login');
   };
@@ -596,7 +837,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Event Workflows
-  const createEventProposal = (eventData: Partial<CampusEvent>): CampusEvent => {
+  const createEventProposal = async (
+    eventData: Partial<CampusEvent>
+  ): Promise<{ success: boolean; event?: CampusEvent; message?: string }> => {
     const club = clubs.find((c) => c.id === eventData.clubId);
     const venue = venues.find((v) => v.id === eventData.venueId);
 
@@ -646,7 +889,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString()
     };
 
-    setEvents((prev) => [newEvent, ...prev]);
+    let finalEvent = newEvent;
+
+    // Dispatch to backend API if authenticated
+    const token = getToken();
+    if (token) {
+      // Resolve clubId if client is using legacy/mock ID
+      let resolvedClubId = eventData.clubId;
+      if (resolvedClubId && !/^[0-9a-fA-F]{24}$/.test(resolvedClubId)) {
+        const foundClub = clubs.find((c) => c.id === resolvedClubId || c.name === eventData.clubName);
+        if (foundClub && /^[0-9a-fA-F]{24}$/.test(foundClub.id)) {
+          resolvedClubId = foundClub.id;
+        } else {
+          resolvedClubId = undefined;
+        }
+      }
+
+      // Resolve venueId if client is using legacy/mock ID
+      let resolvedVenueId = eventData.venueId;
+      if (resolvedVenueId && !/^[0-9a-fA-F]{24}$/.test(resolvedVenueId)) {
+        const foundVenue = venues.find((v) => v.id === resolvedVenueId || v.name === eventData.venueName);
+        if (foundVenue && /^[0-9a-fA-F]{24}$/.test(foundVenue.id)) {
+          resolvedVenueId = foundVenue.id;
+        } else {
+          resolvedVenueId = undefined;
+        }
+      }
+
+      try {
+        const created = await createEventApi({
+          ...eventData,
+          status: initialStatus,
+          clubId: resolvedClubId,
+          venueId: resolvedVenueId
+        });
+        finalEvent = created;
+        setEvents((prev) => [created, ...prev.filter((e) => e.id !== newEvent.id && e.id !== created.id)]);
+        await refreshEvents();
+      } catch (err: any) {
+        console.error('Failed to create event on backend:', err);
+        return { success: false, message: err.message || 'Failed to create event on backend.' };
+      }
+    } else {
+      setEvents((prev) => [newEvent, ...prev]);
+    }
 
     // Send notifications
     if (initialStatus === 'pending_approval') {
@@ -654,33 +940,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addNotification({
         userId: currentUser.id,
         title: 'Approval Sent to Admin',
-        message: `Your event proposal "${newEvent.title}" has been sent to College Admin for approval. It will appear on the calendar once approved.`,
+        message: `Your event proposal "${finalEvent.title}" has been sent to College Admin for approval. It will appear on the calendar once approved.`,
         type: 'info',
-        eventId: newEvent.id
+        eventId: finalEvent.id
       });
 
       // 2. Notify the College Admin of new event proposal needing review
       addNotification({
         userRole: 'college_admin',
-        title: `New Event Proposal: ${newEvent.title}`,
-        message: `Club Lead ${currentUser.name} (${newEvent.clubName || 'Club'}) proposed "${newEvent.title}". Review and approve to publish to campus.`,
+        title: `New Event Proposal: ${finalEvent.title}`,
+        message: `Club Lead ${currentUser.name} (${finalEvent.clubName || 'Club'}) proposed "${finalEvent.title}". Review and approve to publish to campus.`,
         type: 'warning',
-        eventId: newEvent.id
+        eventId: finalEvent.id
       });
     } else if (initialStatus === 'approved') {
       // Broadcast to students
       addNotification({
-        title: `New Event: ${newEvent.title}`,
-        message: `${newEvent.clubName} published a new event at ${newEvent.venueName}.`,
+        title: `New Event: ${finalEvent.title}`,
+        message: `${finalEvent.clubName} published a new event at ${finalEvent.venueName}.`,
         type: 'info',
-        eventId: newEvent.id
+        eventId: finalEvent.id
       });
     }
 
-    return newEvent;
+    return { success: true, event: finalEvent };
   };
 
   const updateEvent = (eventId: string, updates: Partial<CampusEvent>) => {
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      updateEventApi(eventId, updates).catch((err) => {
+        console.error('Failed to update event on backend:', err);
+      });
+    }
+
     setEvents((prev) =>
       prev.map((e) => {
         if (e.id === eventId) {
@@ -695,20 +988,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const approveEvent = (eventId: string) => {
+  const approveEvent = async (
+    eventId: string,
+    reviewerComment?: string
+  ): Promise<{ success: boolean; message?: string }> => {
     const target = events.find((e) => e.id === eventId);
-    if (!target) return;
+    if (!target) return { success: false, message: 'Event not found.' };
 
-    const updated: CampusEvent = {
-      ...target,
-      status: 'approved',
-      approvedBy: currentUser.id,
-      approvedByName: currentUser.name,
-      approvedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    setEvents((prev) => prev.map((e) => (e.id === eventId ? updated : e)));
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      try {
+        await approveEventApi(eventId, reviewerComment);
+        await refreshEvents();
+      } catch (err: any) {
+        console.error('Failed to approve event on backend:', err);
+        return { success: false, message: err.message || 'Failed to approve event.' };
+      }
+    } else {
+      const updated: CampusEvent = {
+        ...target,
+        status: 'approved',
+        approvedBy: currentUser.id,
+        approvedByName: currentUser.name,
+        approvedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEvents((prev) => prev.map((e) => (e.id === eventId ? updated : e)));
+    }
 
     // Notify submitter
     addNotification({
@@ -737,58 +1043,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // safe fallback
     }
+
+    return { success: true };
   };
 
-  const rejectEvent = (eventId: string, reason: string) => {
+  const rejectEvent = async (
+    eventId: string,
+    reason: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    const trimmed = (reason || '').trim();
+    if (!trimmed) {
+      return { success: false, message: 'Rejection reason is required.' };
+    }
     const target = events.find((e) => e.id === eventId);
-    if (!target) return;
+    if (!target) return { success: false, message: 'Event not found.' };
 
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === eventId
-          ? {
-              ...e,
-              status: 'rejected',
-              rejectionReason: reason,
-              updatedAt: new Date().toISOString()
-            }
-          : e
-      )
-    );
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      try {
+        await rejectEventApi(eventId, trimmed);
+        await refreshEvents();
+      } catch (err: any) {
+        console.error('Backend reject error:', err);
+        return { success: false, message: err.message || 'Failed to reject event on backend.' };
+      }
+    } else {
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId
+            ? {
+                ...e,
+                status: 'rejected',
+                rejectionReason: trimmed,
+                updatedAt: new Date().toISOString()
+              }
+            : e
+        )
+      );
+    }
 
     addNotification({
       userId: target.createdBy,
       title: 'Event Proposal Rejected by Admin',
-      message: `Your proposal "${target.title}" was rejected by College Admin. Reason: ${reason}`,
+      message: `Your proposal "${target.title}" was rejected by College Admin. Reason: ${trimmed}`,
       type: 'alert',
       eventId: target.id
     });
+
+    return { success: true };
   };
 
-  const requestChanges = (eventId: string, comment: string) => {
+  const requestChanges = async (
+    eventId: string,
+    comment: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    const trimmed = (comment || '').trim();
+    if (!trimmed) {
+      return { success: false, message: 'Change instructions are required.' };
+    }
     const target = events.find((e) => e.id === eventId);
-    if (!target) return;
+    if (!target) return { success: false, message: 'Event not found.' };
 
-    const currentComments = target.changeComments || [];
-
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === eventId
-          ? {
-              ...e,
-              status: 'changes_requested',
-              changeComments: [comment, ...currentComments],
-              updatedAt: new Date().toISOString()
-            }
-          : e
-      )
-    );
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      try {
+        await requestChangesApi(eventId, trimmed);
+        await refreshEvents();
+      } catch (err: any) {
+        console.error('Backend request-changes error:', err);
+        return { success: false, message: err.message || 'Failed to request changes on backend.' };
+      }
+    } else {
+      const currentComments = target.changeComments || [];
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId
+            ? {
+                ...e,
+                status: 'changes_requested',
+                changeComments: [trimmed, ...(Array.isArray(currentComments) ? currentComments : [currentComments])],
+                updatedAt: new Date().toISOString()
+              }
+            : e
+        )
+      );
+    }
 
     // Notify the creator / Club Lead
     addNotification({
       userId: target.createdBy,
       title: 'Action Required: Changes Requested by Admin',
-      message: `College Admin requested changes on "${target.title}": "${comment}". Please update the proposal and resubmit for Admin's approval.`,
+      message: `College Admin requested changes on "${target.title}": "${trimmed}". Please update the proposal and resubmit for Admin's approval.`,
       type: 'warning',
       eventId: target.id
     });
@@ -799,31 +1144,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addNotification({
         userId: president.id,
         title: 'Action Required: Changes Requested by Admin',
-        message: `College Admin requested changes on "${target.title}": "${comment}". Please update the proposal and resubmit for Admin's approval.`,
+        message: `College Admin requested changes on "${target.title}": "${trimmed}". Please update the proposal and resubmit for Admin's approval.`,
         type: 'warning',
         eventId: target.id
       });
     }
+
+    return { success: true };
   };
 
-  const resubmitEventProposal = (eventId: string, updates: Partial<CampusEvent>) => {
+  const resubmitEventProposal = async (
+    eventId: string,
+    updates: Partial<CampusEvent>
+  ): Promise<{ success: boolean; message?: string }> => {
     const target = events.find((e) => e.id === eventId);
-    if (!target) return;
+    if (!target) return { success: false, message: 'Event not found.' };
 
-    const updatedEvent: CampusEvent = {
-      ...target,
-      ...updates,
-      status: 'pending_approval',
-      updatedAt: new Date().toISOString()
-    };
-
-    setEvents((prev) => prev.map((e) => (e.id === eventId ? updatedEvent : e)));
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      try {
+        await updateEventApi(eventId, {
+          ...updates,
+          status: 'PENDING_APPROVAL'
+        });
+        await refreshEvents();
+      } catch (err: any) {
+        console.error('Backend resubmit proposal error:', err);
+        return { success: false, message: err.message || 'Failed to resubmit proposal on backend.' };
+      }
+    } else {
+      const updatedEvent: CampusEvent = {
+        ...target,
+        ...updates,
+        status: 'pending_approval',
+        updatedAt: new Date().toISOString()
+      };
+      setEvents((prev) => prev.map((e) => (e.id === eventId ? updatedEvent : e)));
+    }
 
     // 1. Notify College Admin
     addNotification({
       userRole: 'college_admin',
       title: 'Event Proposal Resubmitted for Admin Approval',
-      message: `Club Lead ${currentUser.name} (${target.clubName || 'Club'}) updated and resubmitted "${updatedEvent.title}" for Admin approval.`,
+      message: `Club Lead ${currentUser.name} (${target.clubName || 'Club'}) updated and resubmitted "${target.title}" for Admin approval.`,
       type: 'warning',
       eventId: target.id
     });
@@ -832,10 +1195,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNotification({
       userId: currentUser.id,
       title: "Resubmitted for Admin's Approval",
-      message: `Your changes for "${updatedEvent.title}" have been submitted to College Admin for review and approval.`,
+      message: `Your changes for "${target.title}" have been submitted to College Admin for review and approval.`,
       type: 'success',
       eventId: target.id
     });
+
+    return { success: true };
   };
 
   const leadRequestChangesOnApproved = (
@@ -1021,6 +1386,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = events.find((e) => e.id === eventId);
     if (!target) return;
 
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      cancelEventApi(eventId, reason).catch((err) => {
+        console.error('Backend cancel error:', err);
+      });
+    }
+
     setEvents((prev) =>
       prev.map((e) =>
         e.id === eventId
@@ -1135,13 +1507,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Event Registration Logic
-  const registerForEvent = (
+  const registerForEvent = async (
     eventId: string,
     teamName?: string,
     phone?: string
-  ): { success: boolean; message: string; registration?: Registration } => {
+  ): Promise<{ success: boolean; message: string; registration?: Registration }> => {
     const event = events.find((e) => e.id === eventId);
     if (!event) return { success: false, message: 'Event not found.' };
+
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(eventId)) {
+      try {
+        const result = await registerForEventApi(eventId, teamName);
+        if (result.success) {
+          await Promise.allSettled([refreshRegistrations(), refreshEvents()]);
+          try {
+            confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
+          } catch {}
+          return result;
+        } else {
+          return { success: false, message: result.message || 'Registration failed.' };
+        }
+      } catch (err: any) {
+        console.error('Backend registration error:', err);
+        return { success: false, message: err.message || 'Registration failed on server.' };
+      }
+    }
 
     // Business Rule 13: Student cannot register twice
     const existing = registrations.find((r) => r.eventId === eventId && r.studentId === currentUser.id);
@@ -1213,6 +1604,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cancelRegistration = (registrationId: string) => {
     const reg = registrations.find((r) => r.id === registrationId);
     if (!reg) return;
+
+    const token = getToken();
+    if (token && /^[0-9a-fA-F]{24}$/.test(registrationId)) {
+      cancelRegistrationApi(registrationId)
+        .then(() => {
+          refreshRegistrations();
+          refreshEvents();
+        })
+        .catch((err) => {
+          console.error('Backend cancel registration error:', err);
+        });
+    }
 
     setRegistrations((prev) => prev.filter((r) => r.id !== registrationId));
 
@@ -1526,7 +1929,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerStudent,
         registerUser,
         logout,
+        authToken,
         events,
+        eventsLoading,
+        eventsError,
+        refreshEvents,
         createEventProposal,
         updateEvent,
         approveEvent,
@@ -1548,6 +1955,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateVenue,
         toggleVenueAvailability,
         registrations,
+        registrationsLoading,
+        registrationsError,
+        refreshRegistrations,
         registerForEvent,
         cancelRegistration,
         markAttendance,
@@ -1602,7 +2012,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleAcademicNoticeCalendar,
         systemSettings,
         updateSystemSettings,
-        resetDatabase
+        resetDatabase,
+        pendingPasswordChange,
+        setPendingPasswordChange,
+        completePasswordChange
       }}
     >
       {children}

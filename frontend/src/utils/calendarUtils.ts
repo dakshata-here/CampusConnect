@@ -289,7 +289,7 @@ export function getMonthMatrix(year: number, month: number): Array<
     }>
   > = [];
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = formatDateToYYYYMMDD(new Date());
 
   let currentWeek: Array<{
     date: Date;
@@ -303,7 +303,7 @@ export function getMonthMatrix(year: number, month: number): Array<
   const prevMonthLastDay = new Date(year, month, 0).getDate();
   for (let i = startDayOfWeek - 1; i >= 0; i--) {
     const d = new Date(year, month - 1, prevMonthLastDay - i);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dateStr = formatDateToYYYYMMDD(d);
     currentWeek.push({
       date: d,
       dateStr,
@@ -316,7 +316,7 @@ export function getMonthMatrix(year: number, month: number): Array<
   // Current month days
   for (let day = 1; day <= totalDaysInMonth; day++) {
     const d = new Date(year, month, day);
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateStr = formatDateToYYYYMMDD(d);
     currentWeek.push({
       date: d,
       dateStr,
@@ -336,7 +336,7 @@ export function getMonthMatrix(year: number, month: number): Array<
     let nextMonthDay = 1;
     while (currentWeek.length < 7) {
       const d = new Date(year, month + 1, nextMonthDay);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dateStr = formatDateToYYYYMMDD(d);
       currentWeek.push({
         date: d,
         dateStr,
@@ -350,6 +350,92 @@ export function getMonthMatrix(year: number, month: number): Array<
   }
 
   return matrix;
+}
+
+/**
+ * Format a Date object into YYYY-MM-DD string strictly using local date components
+ */
+export function formatDateToYYYYMMDD(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export interface CalendarWeekDay {
+  date: Date;
+  dateStr: string;
+  dayNumber: number;
+  dayName: string;
+  fullDayName: string;
+  isToday: boolean;
+}
+
+/**
+ * Generate 7 days of the week containing the given reference date (Sunday through Saturday)
+ */
+export function getWeekDays(referenceDate: Date): CalendarWeekDay[] {
+  const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const dayOfWeek = d.getDay(); // 0 = Sunday
+  const startOfWeek = new Date(d);
+  startOfWeek.setDate(d.getDate() - dayOfWeek);
+
+  const todayStr = formatDateToYYYYMMDD(new Date());
+  const days: CalendarWeekDay[] = [];
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  for (let i = 0; i < 7; i++) {
+    const cur = new Date(startOfWeek);
+    cur.setDate(startOfWeek.getDate() + i);
+    const dateStr = formatDateToYYYYMMDD(cur);
+
+    days.push({
+      date: cur,
+      dateStr,
+      dayNumber: cur.getDate(),
+      dayName: dayNames[i],
+      fullDayName: fullDayNames[i],
+      isToday: dateStr === todayStr
+    });
+  }
+
+  return days;
+}
+
+/**
+ * Formats weekly range header (e.g., 'Sep 13 – Sep 19, 2026' or 'Dec 27, 2026 – Jan 2, 2027')
+ */
+export function formatWeekRange(referenceDate: Date): string {
+  const week = getWeekDays(referenceDate);
+  const start = week[0].date;
+  const end = week[6].date;
+
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear !== endYear) {
+    return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
+  }
+  if (startMonth !== endMonth) {
+    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${startYear}`;
+  }
+  return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${startYear}`;
+}
+
+/**
+ * Formats daily view header (e.g., 'Tuesday, September 15, 2026')
+ */
+export function formatDayHeader(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
 }
 
 /**
@@ -380,4 +466,131 @@ export function exportToCsv(filename: string, rows: Record<string, any>[]): void
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Interface matching event date & time properties
+ */
+export interface EventTimeInput {
+  date: string | Date;
+  endDate?: string | Date | null;
+  endTime?: string;
+  startTime?: string;
+}
+
+/**
+ * Parses time string (e.g., '14:30', '02:30 PM', '9:00 AM') into 24-hr [hours, minutes].
+ * Returns null if missing or cannot be parsed.
+ */
+export function parseTimeToHoursAndMinutes(timeStr?: string | null): { hours: number; minutes: number } | null {
+  if (!timeStr || typeof timeStr !== 'string') {
+    return null;
+  }
+
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = parseInt(match12[2], 10);
+    const ampm = match12[3]?.toUpperCase();
+
+    if (ampm === 'PM' && hours < 12) {
+      hours += 12;
+    } else if (ampm === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return { hours, minutes };
+    }
+  }
+
+  const parts = trimmed.split(':');
+  if (parts.length >= 2) {
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return { hours, minutes };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extracts YYYY-MM-DD from string or Date safely without timezone drift.
+ */
+export function formatToDateString(d: Date | string): string {
+  if (typeof d === 'string') {
+    const trimmed = d.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      return trimmed.slice(0, 10);
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return trimmed.slice(0, 10);
+  }
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Calculates the exact end Date object of an event.
+ * Handles:
+ * - Multi-day events via `endDate`
+ * - Single-day events via `date`
+ * - Precise `endTime`
+ * - Documented fallback: when endTime is missing or invalid, defaults to 23:59:59.999 on that day
+ * - Missing/invalid date fallback: returns null
+ */
+export function getEventEndDateTime(event: EventTimeInput): Date | null {
+  if (!event) return null;
+
+  const targetDateInput = event.endDate || event.date;
+  if (!targetDateInput) return null;
+
+  const dateStr = formatToDateString(targetDateInput);
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) {
+    return null;
+  }
+
+  const [year, month, day] = parts;
+  const parsedTime = parseTimeToHoursAndMinutes(event.endTime);
+
+  if (parsedTime) {
+    return new Date(year, month - 1, day, parsedTime.hours, parsedTime.minutes, 0, 0);
+  }
+
+  // Documented fallback: when endTime is missing or invalid, assume end of day 23:59:59.999
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
+/**
+ * Returns true if the event has ended relative to referenceTime (default: new Date()).
+ * - If end datetime cannot be determined, returns false (safe fallback to avoid hiding upcoming events).
+ * - Multi-day events remain visible until their final end date and time have passed.
+ * - In-progress events (current time between start and end) return false (remain visible).
+ */
+export function isEventPast(event: EventTimeInput, referenceTime: Date = new Date()): boolean {
+  const endDateTime = getEventEndDateTime(event);
+  if (!endDateTime) {
+    return false;
+  }
+  return endDateTime.getTime() < referenceTime.getTime();
+}
+
+/**
+ * Returns true if the event has not yet ended relative to referenceTime (default: new Date()).
+ */
+export function isEventActive(event: EventTimeInput, referenceTime: Date = new Date()): boolean {
+  return !isEventPast(event, referenceTime);
 }

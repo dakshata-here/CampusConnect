@@ -33,6 +33,7 @@ export interface User {
   bio?: string;
   securityQuestions?: SecurityQuestion[];
   status?: 'active' | 'pending' | 'rejected';
+  mustChangePassword?: boolean;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }
@@ -191,6 +192,7 @@ export interface CampusEvent {
   posterUrl: string;
   organizerName?: string;
   date: string; // YYYY-MM-DD
+  endDate?: string | null; // Optional YYYY-MM-DD for multi-day events
   startTime: string; // HH:MM
   endTime: string; // HH:MM
   venueId: string | null;
@@ -614,6 +616,7 @@ export interface EventCreatePayload {
   posterTheme?: string;
   posterUrl?: string;
   date: string;
+  endDate?: string | null;
   startTime: string;
   endTime: string;
   venueId?: string | null;

@@ -1,7 +1,17 @@
 import { Router, Response } from 'express';
-import { register, login, getMe, logout } from '../controllers/auth.controller.js';
+import {
+  register,
+  login,
+  getMe,
+  logout,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  adminIssueResetToken
+} from '../controllers/auth.controller.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/role.middleware.js';
+import { UserRole } from '../models/User.js';
 
 const router = Router();
 
@@ -12,6 +22,19 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/me', requireAuth, getMe);
 router.post('/logout', logout);
+
+// ==========================================
+// Credential Security & Password Recovery
+// ==========================================
+router.post('/change-password', requireAuth, changePassword);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.post(
+  '/admin-issue-reset-token',
+  requireAuth,
+  requireRole(UserRole.COLLEGE_ADMIN),
+  adminIssueResetToken
+);
 
 // ==========================================
 // Role-Based Access Control (RBAC) Test Routes

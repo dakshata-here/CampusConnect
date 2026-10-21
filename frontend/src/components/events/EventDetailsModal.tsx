@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Share2,
   CheckCircle2,
+  XCircle,
   AlertTriangle,
   QrCode,
   Sparkles,
@@ -93,10 +94,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
   const timeRemaining = calculateTimeRemaining(event.date, event.startTime);
   const isPast = timeRemaining.isPast;
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setIsRegistering(true);
     setRegError('');
-    const res = registerForEvent(event.id, teamName, phone);
+    const res = await registerForEvent(event.id, teamName, phone);
     setIsRegistering(false);
     if (!res.success) {
       setRegError(res.message);
@@ -170,26 +171,29 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
         {/* Modal Body Container */}
         <div className="p-3.5 sm:p-6 md:p-8 space-y-5 sm:space-y-6 flex-1 overflow-y-auto overscroll-contain">
           
-          {/* Rescheduled Notice Banner if applicable */}
-          {event.rescheduledHistory && (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-sm text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>Notice: Event Schedule Updated</span>
+          {/* Rejected Notice Banner if applicable */}
+          {event.status === 'rejected' && (
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 space-y-1.5 text-xs animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-sm text-rose-700 dark:text-rose-300">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Proposal Rejected by College Admin</span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Reason: {event.rescheduledHistory.reason}
+              <p className="text-slate-700 dark:text-slate-300">
+                Rejection Reason: <span className="font-semibold italic text-rose-800 dark:text-rose-200">"{event.rejectionReason || 'No specific rejection reason provided.'}"</span>
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-amber-200/60 dark:border-amber-800/40">
-                <div>
-                  <span className="text-slate-400">Previous:</span>{' '}
-                  <span className="line-through">{event.rescheduledHistory.oldDate} ({event.rescheduledHistory.oldTime}) at {event.rescheduledHistory.oldVenue}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Rescheduled To:</span>{' '}
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{event.rescheduledHistory.newDate} ({event.rescheduledHistory.newTime}) at {event.rescheduledHistory.newVenue}</span>
-                </div>
+            </div>
+          )}
+
+          {/* Changes Requested Banner if applicable */}
+          {event.status === 'changes_requested' && (
+            <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-300 dark:border-orange-800 text-orange-900 dark:text-orange-200 space-y-1.5 text-xs animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-sm text-orange-700 dark:text-orange-300">
+                <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0" />
+                <span>Changes Requested by College Admin</span>
               </div>
+              <p className="text-slate-700 dark:text-slate-300">
+                Admin Feedback: <span className="font-semibold italic text-orange-800 dark:text-orange-200">"{event.changeComments?.[0] || 'Please review proposal details.'}"</span>
+              </p>
             </div>
           )}
 
@@ -198,8 +202,14 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
               <div>
-                <div className="font-bold text-slate-900 dark:text-slate-100">Date</div>
-                <div className="text-slate-600 dark:text-slate-400">{formatFullDate(event.date)}</div>
+                <div className="font-bold text-slate-900 dark:text-slate-100">
+                  {event.endDate && event.endDate !== event.date ? 'Duration' : 'Date'}
+                </div>
+                <div className="text-slate-600 dark:text-slate-400">
+                  {event.endDate && event.endDate !== event.date
+                    ? `${formatFullDate(event.date)} – ${formatFullDate(event.endDate)}`
+                    : formatFullDate(event.date)}
+                </div>
               </div>
             </div>
 

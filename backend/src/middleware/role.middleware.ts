@@ -32,12 +32,12 @@ export const requireRole = (...roles: (AllowedRole | string)[]) => {
       .map((r) => normalizeRole(r))
       .filter((r): r is AllowedRole => r !== null);
 
-    const userRole = req.user.role;
+    const userRole = req.user.role || (req.user.userType ? normalizeRole(req.user.userType) : null);
 
-    if (!normalizedTargetRoles.includes(userRole)) {
+    if (!userRole || !normalizedTargetRoles.includes(userRole)) {
       res.status(403).json({
         success: false,
-        message: `Access denied. Requires one of the following roles: [${normalizedTargetRoles.join(', ')}]. Current role: ${userRole}`
+        message: `Access denied. Requires one of the following roles: [${normalizedTargetRoles.join(', ')}]. Current role: ${userRole || 'unassigned'}`
       });
       return;
     }

@@ -23,6 +23,10 @@
     "test:registrations": "tsx tests/registrations.test.ts",
     "test:notifications": "tsx tests/notifications.test.ts",
     "test:certificates": "tsx tests/certificates.test.ts",
+    "test:compatibility": "tsx tests/userSchemaCompatibility.test.ts",
+    "test:credentials": "tsx tests/credentialSecurity.test.ts",
+    "migrate:users:dry-run": "tsx src/scripts/migrateAtlasUsers.ts --dry-run",
+    "migrate:users:apply": "tsx src/scripts/migrateAtlasUsers.ts --confirm-production-migration",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },

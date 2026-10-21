@@ -17,14 +17,25 @@ import {
   Search,
   FileSpreadsheet,
   Bell,
-  UserCheck
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
-import { formatDisplayDate, formatDisplayTime } from '../../utils/calendarUtils';
+import { formatDisplayDate, formatDisplayTime, isEventPast } from '../../utils/calendarUtils';
+import { fetchEventsApi } from '../../utils/api';
+import { DashboardFilterBar } from '../common/DashboardFilterBar';
+import {
+  filterEvents,
+  DEFAULT_FILTER_CRITERIA,
+  EventFilterCriteria
+} from '../../utils/filterUtils';
 
 export const AdminDashboard: React.FC = () => {
   const {
     currentUser,
     events,
+    eventsLoading,
+    eventsError,
+    refreshEvents,
     clubs,
     venues,
     registrations,
@@ -37,34 +48,62 @@ export const AdminDashboard: React.FC = () => {
     setSelectedEventForApproval,
     setSelectedEventForModal,
     setIsCreateEventOpen,
-    setActiveTab
+    setActiveTab,
+    searchQuery
   } = useApp();
 
-  const [searchFilter, setSearchFilter] = useState('');
+  const [filters, setFilters] = useState<EventFilterCriteria>({
+    ...DEFAULT_FILTER_CRITERIA,
+    searchQuery: searchQuery || ''
+  });
   const [isAdminNotifOpen, setIsAdminNotifOpen] = useState(false);
+
+  // Sync with global search query
+  React.useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== filters.searchQuery) {
+      setFilters((prev) => ({ ...prev, searchQuery }));
+    }
+  }, [searchQuery]);
 
   const adminNotifications = notifications.filter(
     (n) => (!n.userId || n.userId === currentUser.id) && (!n.userRole || n.userRole === currentUser.role)
   );
   const unreadAdminCount = adminNotifications.filter((n) => !n.isRead).length;
 
-  const pendingApprovals = events.filter((e) => e.status === 'pending_approval');
-  const publishedEvents = events.filter((e) => ['published', 'approved', 'registration_open'].includes(e.status));
-  const academicEvents = events.filter((e) => e.category === 'academic');
+  const pendingApprovals = events.filter(
+    (e) => !isEventPast(e) && (e.status || '').toLowerCase() === 'pending_approval'
+  );
+  const publishedEvents = events.filter(
+    (e) =>
+      !isEventPast(e) &&
+      ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase())
+  );
+  const academicEvents = events.filter(
+    (e) => !isEventPast(e) && (e.category || '').toLowerCase() === 'academic'
+  );
 
-  const exportCsvReport = () => {
-    const headers = 'Event ID,Title,Category,Type,Club,Date,StartTime,EndTime,Venue,Registrations,MaxCapacity,Status\n';
-    const rows = events.map((e) =>
-      `"${e.id}","${e.title}","${e.category}","${e.eventType}","${e.clubName || 'College'}","${e.date}","${e.startTime}","${e.endTime}","${e.venueName}",${e.currentRegistrations},${e.maxParticipants},"${e.status}"`
-    ).join('\n');
+  const filteredPendingApprovals = filterEvents(pendingApprovals, filters, {
+    userRole: 'college_admin'
+  });
 
-    const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CampusConnect_Institutional_Report_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportCsvReport = async () => {
+    try {
+      const allEvents = await fetchEventsApi(true);
+      const headers = 'Event ID,Title,Category,Type,Club,Date,EndDate,StartTime,EndTime,Venue,Registrations,MaxCapacity,Status\n';
+      const rows = allEvents.map((e) =>
+        `"${e.id}","${e.title}","${e.category}","${e.eventType}","${e.clubName || 'College'}","${e.date}","${e.endDate || ''}","${e.startTime}","${e.endTime}","${e.venueName}",${e.currentRegistrations || 0},${e.maxParticipants || 'N/A'},"${e.status}"`
+      ).join('\n');
+
+      const blob = new Blob([headers + rows], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CampusConnect_Institutional_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export institutional CSV report', err);
+    }
   };
 
   return (
@@ -391,15 +430,63 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {pendingApprovals.length === 0 ? (
+        {/* Dashboard Filter Toolbar */}
+        <DashboardFilterBar
+          filters={filters}
+          onFilterChange={setFilters}
+          onReset={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+          clubs={clubs}
+          venues={venues}
+          totalCount={pendingApprovals.length}
+          filteredCount={filteredPendingApprovals.length}
+          userRole="college_admin"
+          showStatusFilter={false}
+          showClubFilter={true}
+          showVenueFilter={true}
+          showCategoryFilter={true}
+          showDateFilter={true}
+          placeholderSearch="Search proposals by title, club, venue, or keyword..."
+        />
+
+        {eventsLoading ? (
+          <div className="p-8 text-center dashboard-card rounded-3xl border space-y-3">
+            <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Loading pending approval queue...</p>
+          </div>
+        ) : eventsError ? (
+          <div className="p-6 text-center dashboard-card rounded-3xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 space-y-3">
+            <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
+            <h3 className="font-bold text-sm text-rose-800 dark:text-rose-200">Failed to Load Approvals</h3>
+            <p className="text-xs text-rose-600 dark:text-rose-400">{eventsError}</p>
+            <button
+              onClick={() => refreshEvents()}
+              className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retry Loading</span>
+            </button>
+          </div>
+        ) : pendingApprovals.length === 0 ? (
           <div className="p-8 text-center dashboard-card rounded-3xl border space-y-2">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
             <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">All Approvals Clear</h3>
             <p className="text-xs text-slate-400">No pending event proposals across any campus club.</p>
           </div>
+        ) : filteredPendingApprovals.length === 0 ? (
+          <div className="p-8 text-center dashboard-card rounded-3xl border space-y-2">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">No pending proposals match the selected filters</h3>
+            <p className="text-xs text-slate-400">Try adjusting your search criteria or resetting filters.</p>
+            <button
+              onClick={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+              className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pendingApprovals.map((evt) => (
+            {filteredPendingApprovals.map((evt) => (
               <div
                 key={evt.id}
                 className="p-5 rounded-3xl dashboard-card border border-purple-200 dark:border-purple-900/60 shadow-sm space-y-3 flex flex-col justify-between"
@@ -416,16 +503,27 @@ export const AdminDashboard: React.FC = () => {
                     {evt.title}
                   </h3>
 
+                  {evt.shortDescription && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                      {evt.shortDescription}
+                    </p>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <div>📅 {formatDisplayDate(evt.date)}</div>
-                    <div>⏰ {formatDisplayTime(evt.startTime)}</div>
+                    <div>⏰ {formatDisplayTime(evt.startTime)} – {formatDisplayTime(evt.endTime)}</div>
                     <div className="col-span-2">📍 {evt.venueName}</div>
+                    {evt.createdByName && (
+                      <div className="col-span-2 text-[11px] text-slate-400">
+                        👤 Submitted by: <span className="font-semibold text-slate-700 dark:text-slate-300">{evt.createdByName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedEventForApproval(evt)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Admin Review & Decision</span>
                   <ArrowRight className="w-4 h-4" />

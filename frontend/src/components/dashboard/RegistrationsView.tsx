@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CampusEvent, Registration } from '../../types';
 import {
@@ -17,9 +17,16 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronRight,
-  Filter
+  Filter,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { formatDisplayDate, formatDisplayTime } from '../../utils/calendarUtils';
+import {
+  fetchEventRegistrationsApi,
+  downloadEventRegistrationsCsv,
+  downloadEventRegistrationsPdf
+} from '../../utils/api';
 
 export const RegistrationsView: React.FC = () => {
   const {
@@ -55,10 +62,48 @@ export const RegistrationsView: React.FC = () => {
   const activeEvent =
     events.find((e) => e.id === selectedEventId) || defaultSelected;
 
+  // Backend registration state for the active event
+  const [backendRegistrations, setBackendRegistrations] = useState<Registration[]>([]);
+  const [isLoadingRegistrations, setIsLoadingRegistrations] = useState<boolean>(false);
+  const [registrationsError, setRegistrationsError] = useState<string | null>(null);
+
+  const loadEventRegistrations = () => {
+    if (!activeEvent?.id) {
+      setBackendRegistrations([]);
+      setRegistrationsError(null);
+      return;
+    }
+
+    const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+    if (token && /^[0-9a-fA-F]{24}$/.test(activeEvent.id)) {
+      setIsLoadingRegistrations(true);
+      setRegistrationsError(null);
+      fetchEventRegistrationsApi(activeEvent.id)
+        .then((data) => {
+          setBackendRegistrations(data);
+        })
+        .catch((err: any) => {
+          console.error('Failed to fetch event registrations from backend:', err);
+          setRegistrationsError(err.message || 'Failed to load event registrations.');
+          setBackendRegistrations([]);
+        })
+        .finally(() => {
+          setIsLoadingRegistrations(false);
+        });
+    } else {
+      const localRegs = registrations.filter((r) => r.eventId === activeEvent.id);
+      setBackendRegistrations(localRegs);
+      setIsLoadingRegistrations(false);
+      setRegistrationsError(null);
+    }
+  };
+
+  useEffect(() => {
+    loadEventRegistrations();
+  }, [activeEvent?.id, registrations]);
+
   // Registered students for the selected event
-  const eventRegistrations = registrations.filter(
-    (r) => r.eventId === activeEvent?.id
-  );
+  const eventRegistrations = backendRegistrations;
 
   // Filtered students by search
   const filteredStudents = eventRegistrations.filter(
@@ -144,48 +189,16 @@ export const RegistrationsView: React.FC = () => {
   };
 
   const handleExportCSV = async () => {
-    if (!activeEvent || eventRegistrations.length === 0) return;
+    if (!activeEvent) return;
 
     setIsDownloading(true);
     setDownloadError('');
 
     try {
-      // Try backend endpoint if accessible
-      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
-      const response = await fetch(`/api/events/${activeEvent.id}/registrations/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      }).catch(() => null);
-
-      const contentType = response?.headers?.get('content-type') || '';
-
-      if (response && response.ok && !contentType.includes('text/html')) {
-        const blob = await response.blob();
-        const csvBlob = new Blob([blob], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(csvBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        const filenameHeader = response.headers.get('content-disposition');
-        let filename = `Event_${activeEvent.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`;
-        if (filenameHeader && filenameHeader.includes('filename=')) {
-          const match = filenameHeader.match(/filename="?([^";]+)"?/);
-          if (match && match[1]) {
-            filename = match[1].trim();
-          }
-        }
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (/^[0-9a-fA-F]{24}$/.test(activeEvent.id)) {
+        await downloadEventRegistrationsCsv(activeEvent.id, activeEvent.title);
       } else {
-        // If unauthorized on backend, surface the error
-        if (response && (response.status === 401 || response.status === 403)) {
-          const errorData = await response.json().catch(() => null);
-          setDownloadError(errorData?.message || 'Unauthorized to download event registration documentation.');
-          return;
-        }
-
-        // Safe local generation fallback strictly matching documentation specifications
+        // Fallback only for offline demo mock events
         const headers = [
           'Student Name',
           'PRN / Enrollment Number',
@@ -221,7 +234,7 @@ export const RegistrationsView: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to export CSV', err);
-      setDownloadError('Failed to generate CSV registration documentation. Please try again.');
+      setDownloadError(err.message || 'Failed to download CSV registration documentation.');
     } finally {
       setIsDownloading(false);
     }
@@ -236,46 +249,14 @@ export const RegistrationsView: React.FC = () => {
     setDownloadError('');
 
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
-      const response = await fetch(`/api/events/${activeEvent.id}/registrations/download/pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      const contentType = response.headers.get('content-type') || '';
-
-      if (response.ok && !contentType.includes('text/html') && contentType.includes('application/pdf')) {
-        const blob = await response.blob();
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        const filenameHeader = response.headers.get('content-disposition');
-        let filename = `CampusConnect_${activeEvent.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.pdf`;
-        if (filenameHeader && filenameHeader.includes('filename=')) {
-          const match = filenameHeader.match(/filename="?([^";]+)"?/);
-          if (match && match[1]) {
-            filename = match[1].trim();
-          }
-        }
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (/^[0-9a-fA-F]{24}$/.test(activeEvent.id)) {
+        await downloadEventRegistrationsPdf(activeEvent.id, activeEvent.title);
       } else {
-        if (response.status === 401) {
-          setDownloadError('Authentication required. Please log in to download documentation.');
-        } else if (response.status === 403) {
-          setDownloadError('Forbidden. You are not authorized to download this event documentation.');
-        } else if (response.status === 404) {
-          setDownloadError('Event not found or registration records unavailable.');
-        } else {
-          setDownloadError('Failed to download PDF registration documentation.');
-        }
+        setDownloadError('PDF registration documentation requires an active server event with valid database ID.');
       }
     } catch (err: any) {
       console.error('Failed to download registration PDF', err);
-      setDownloadError('Failed to generate PDF registration documentation. Please try again.');
+      setDownloadError(err.message || 'Failed to download PDF registration documentation.');
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -473,7 +454,28 @@ export const RegistrationsView: React.FC = () => {
           </div>
 
           {/* Students Table */}
-          {filteredStudents.length === 0 ? (
+          {isLoadingRegistrations ? (
+            <div className="text-center py-12 space-y-3 border rounded-xl border-dashed border-blue-200 dark:border-slate-800">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Loading attendee records from database...
+              </p>
+            </div>
+          ) : registrationsError ? (
+            <div className="text-center py-10 space-y-3 border rounded-xl border-dashed border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto" />
+              <p className="text-xs font-bold text-red-700 dark:text-red-300">
+                {registrationsError}
+              </p>
+              <button
+                onClick={loadEventRegistrations}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/60 text-red-700 dark:text-red-200 text-xs font-semibold"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+            </div>
+          ) : filteredStudents.length === 0 ? (
             <div className="text-center py-10 space-y-2 border rounded-xl border-dashed border-blue-200 dark:border-slate-800">
               <Users className="w-8 h-8 text-blue-400 mx-auto" />
               <p className="text-xs font-bold text-slate-700 dark:text-slate-300">

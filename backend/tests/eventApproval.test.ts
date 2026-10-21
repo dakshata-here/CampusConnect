@@ -217,7 +217,13 @@ async function runTests() {
     });
 
     // Helper to create test events
-    const createTestEvent = async (title: string, status: EventStatus = EventStatus.PENDING_APPROVAL) => {
+    const createTestEvent = async (
+      title: string,
+      status: EventStatus = EventStatus.PENDING_APPROVAL,
+      dateStr: string = '2026-11-20',
+      startTime: string = '10:00 AM',
+      endTime: string = '01:00 PM'
+    ) => {
       return Event.create({
         title,
         eventType: 'Workshop',
@@ -225,9 +231,9 @@ async function runTests() {
         clubId: techClub._id,
         venueId: seminarHall._id,
         proposedBy: presidentUser._id,
-        date: new Date('2026-11-20'),
-        startTime: '10:00 AM',
-        endTime: '01:00 PM',
+        date: new Date(dateStr),
+        startTime,
+        endTime,
         status
       });
     };
@@ -326,7 +332,11 @@ async function runTests() {
     // ------------------------------------------------------------------------
     console.log('\n--- 4. Request Changes Workflow ---');
 
-    const pendingEvent3 = await createTestEvent('Pending Event 3 (Incomplete Agenda)', EventStatus.PENDING_APPROVAL);
+    const pendingEvent3 = await createTestEvent(
+      'Pending Event 3 (Incomplete Agenda)',
+      EventStatus.PENDING_APPROVAL,
+      '2026-11-21'
+    );
 
     // 22. Request changes rejects empty comments
     const res22Bad = await apiRequest(
@@ -398,7 +408,7 @@ async function runTests() {
     console.log('\n--- 6. Data Integrity & State Transitions ---');
 
     const fakeUserId = new mongoose.Types.ObjectId().toString();
-    const freshEvent = await createTestEvent('Fresh Test Event', EventStatus.PENDING_APPROVAL);
+    const freshEvent = await createTestEvent('Fresh Test Event', EventStatus.PENDING_APPROVAL, '2026-11-23');
 
     // 36. Client cannot spoof reviewedBy or action in request body
     const res36 = await apiRequest(
@@ -430,9 +440,190 @@ async function runTests() {
     assert(res39.status === 400, '39. Cannot reject a CANCELLED event (400)');
 
     // 40. Cannot request changes on a COMPLETED event
-    const completedEvent = await createTestEvent('Completed Event', EventStatus.COMPLETED);
+    const completedEvent = await createTestEvent('Completed Event', EventStatus.COMPLETED, '2026-11-22');
     const res40 = await apiRequest('PATCH', `/api/events/${completedEvent._id}/request-changes`, { comments: 'Change date' }, adminToken);
     assert(res40.status === 400, '40. Cannot request changes on a COMPLETED event (400)');
+
+    // ------------------------------------------------------------------------
+    // 7. VENUE & TIME CONFLICT VALIDATION
+    // ------------------------------------------------------------------------
+    console.log('\n--- 7. Venue & Time Conflict Validation ---');
+
+    // Create a 2nd venue
+    const auditorium = await Venue.create({
+      name: 'Main Auditorium',
+      building: 'Auditorium Block',
+      floor: 'Ground Floor',
+      capacity: 500,
+      facilities: ['Sound System', 'Projector'],
+      isAvailable: true,
+      operationalStatus: VenueOperationalStatus.OPERATIONAL
+    });
+
+    // An event was approved on 2026-11-20 from 10:00 AM to 01:00 PM at seminarHall (pendingEvent1 / freshEvent)
+    // 41. Same venue + same date + overlapping time on submission: REJECTED with 409
+    const res41Conflict = await apiRequest(
+      'POST',
+      '/api/events',
+      {
+        title: 'Conflicting Hackathon',
+        eventType: 'Hackathon',
+        category: 'club',
+        clubId: (techClub._id as any).toString(),
+        venueId: (seminarHall._id as any).toString(),
+        date: '2026-11-20',
+        startTime: '11:00 AM',
+        endTime: '02:00 PM',
+        shortDescription: 'Overlaps with 10:00 AM - 01:00 PM'
+      },
+      presToken
+    );
+    assert(res41Conflict.status === 409, '41. Same venue + same date + overlapping time rejected with 409');
+    assert(res41Conflict.body.success === false, '42. Conflict response success is false');
+    assert(res41Conflict.body.message.toLowerCase().includes('booked'), '43. Error message clearly identifies venue conflict');
+
+    // 44. Same venue + same date + NON-overlapping time on submission: ALLOWED (201)
+    const res44NonOverlap = await apiRequest(
+      'POST',
+      '/api/events',
+      {
+        title: 'Evening Technical Seminar',
+        eventType: 'Seminar',
+        category: 'club',
+        clubId: (techClub._id as any).toString(),
+        venueId: (seminarHall._id as any).toString(),
+        date: '2026-11-20',
+        startTime: '02:00 PM',
+        endTime: '05:00 PM',
+        shortDescription: 'Non-overlapping afternoon slot'
+      },
+      presToken
+    );
+    assert(res44NonOverlap.status === 201, '44. Same venue + same date + non-overlapping time allowed (201)');
+
+    // 45. Different venue + overlapping time on submission: ALLOWED (201)
+    const res45DiffVenue = await apiRequest(
+      'POST',
+      '/api/events',
+      {
+        title: 'Auditorium Fest',
+        eventType: 'Fest',
+        category: 'club',
+        clubId: (techClub._id as any).toString(),
+        venueId: (auditorium._id as any).toString(),
+        date: '2026-11-20',
+        startTime: '10:00 AM',
+        endTime: '01:00 PM',
+        shortDescription: 'Different venue during same hours'
+      },
+      presToken
+    );
+    assert(res45DiffVenue.status === 201, '45. Different venue + overlapping time allowed (201)');
+
+    // 46. Conflict detected when Admin approves an event if another was already approved for same slot
+    // Create an approved event first on 2026-11-25
+    await Event.create({
+      title: 'Approved Morning Event',
+      eventType: 'Workshop',
+      category: EventCategory.CLUB,
+      clubId: techClub._id,
+      venueId: seminarHall._id,
+      proposedBy: presidentUser._id,
+      date: new Date('2026-11-25'),
+      startTime: '09:00 AM',
+      endTime: '12:00 PM',
+      status: EventStatus.APPROVED
+    });
+
+    // Create a pending event for the same slot
+    const conflictingPending = await Event.create({
+      title: 'Late Submitted Morning Event',
+      eventType: 'Workshop',
+      category: EventCategory.CLUB,
+      clubId: techClub._id,
+      venueId: seminarHall._id,
+      proposedBy: presidentUser._id,
+      date: new Date('2026-11-25'),
+      startTime: '10:00 AM',
+      endTime: '01:00 PM',
+      status: EventStatus.PENDING_APPROVAL
+    });
+
+    // Attempt to approve the conflicting pending event
+    const res46ApprovalConflict = await apiRequest(
+      'PATCH',
+      `/api/events/${conflictingPending._id}/approve`,
+      { comments: 'Attempting approval' },
+      adminToken
+    );
+    assert(res46ApprovalConflict.status === 409, '46. Admin approval blocks venue conflict with 409');
+    const stillPending = await Event.findById(conflictingPending._id);
+    assert(stillPending?.status === EventStatus.PENDING_APPROVAL, '47. Event status remains PENDING_APPROVAL after blocked approval');
+
+    // ------------------------------------------------------------------------
+    // 8. CLUB LEAD SUBMISSION & PENDING APPROVAL QUEUE INTEGRATION
+    // ------------------------------------------------------------------------
+    console.log('\n--- 8. Club Lead Submission & Pending Approval Queue ---');
+
+    // 48. When Club Lead creates an event without explicit status, it defaults to PENDING_APPROVAL
+    const res48Submit = await apiRequest(
+      'POST',
+      '/api/events',
+      {
+        title: 'New AI Workshop Proposal',
+        eventType: 'Workshop',
+        category: 'club',
+        clubId: (techClub._id as any).toString(),
+        venueId: (auditorium._id as any).toString(),
+        date: '2026-12-01',
+        startTime: '10:00 AM',
+        endTime: '01:00 PM',
+        shortDescription: 'AI intro workshop'
+      },
+      presToken
+    );
+    assert(res48Submit.status === 201, '48. Club Lead event proposal created (201)');
+    assert(res48Submit.body.event.status === EventStatus.PENDING_APPROVAL, '49. Submitted event status defaults to PENDING_APPROVAL (not DRAFT)');
+
+    // 50. Admin pending-approval queue retrieves this event
+    const res50AdminQueue = await apiRequest(
+      'GET',
+      '/api/events?status=pending_approval',
+      undefined,
+      adminToken
+    );
+    assert(res50AdminQueue.status === 200, '50. Admin can query pending_approval events (200)');
+    const foundInQueue = res50AdminQueue.body.events.some(
+      (e: any) => e._id === res48Submit.body.event._id || e.id === res48Submit.body.event._id
+    );
+    assert(foundInQueue, '51. Newly submitted proposal is present in Admin pending approval queue');
+
+    // ------------------------------------------------------------------------
+    // 9. REJECTION VALIDATION CHECKS
+    // ------------------------------------------------------------------------
+    console.log('\n--- 9. Rejection Reason Validation ---');
+
+    // 52. Admin cannot reject without a reason (empty or whitespace string)
+    const submittedEventId = res48Submit.body.event._id || res48Submit.body.event.id;
+    const res52EmptyReason = await apiRequest(
+      'PATCH',
+      `/api/events/${submittedEventId}/reject`,
+      { reason: '   ' },
+      adminToken
+    );
+    assert(res52EmptyReason.status === 400, '52. Rejecting without a reason returns 400');
+    assert(res52EmptyReason.body.message.includes('Rejection reason is required'), '53. Helpful error message returned for missing reason');
+
+    // 54. Admin can reject with a valid reason
+    const res54ValidReject = await apiRequest(
+      'PATCH',
+      `/api/events/${submittedEventId}/reject`,
+      { reason: 'Overlaps with annual college accreditation visit.' },
+      adminToken
+    );
+    assert(res54ValidReject.status === 200, '54. Rejection with valid reason succeeds (200)');
+    assert(res54ValidReject.body.event.status === EventStatus.REJECTED, '55. Event status is updated to REJECTED');
+    assert(res54ValidReject.body.event.rejectionReason === 'Overlaps with annual college accreditation visit.', '56. Rejection reason returned in event response');
 
     console.log(`\n========================================`);
     console.log(`Event Approval Tests: ${passedTests}/${totalTests} Passed.`);

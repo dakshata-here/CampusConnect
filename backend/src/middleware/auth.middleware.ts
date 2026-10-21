@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenPayload } from '../utils/jwt.js';
-import { User, IUser } from '../models/User.js';
+import { User, IUser, UserRole } from '../models/User.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: IUser;
@@ -71,6 +71,49 @@ export const requireAuth = async (
         message: 'Your registration request was rejected by the administrator.'
       });
       return;
+    }
+
+    // 4. Invalidate sessions issued before password change
+    if (decoded && (decoded as any).iat && user.passwordChangedAt) {
+      const tokenIatSec = (decoded as any).iat;
+      const pwdChangedSec = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      if (tokenIatSec < pwdChangedSec) {
+        res.status(401).json({
+          success: false,
+          message: 'Password was recently changed. Please log in again with your new credentials.'
+        });
+        return;
+      }
+    }
+
+    // 5. Mandatory Password Change guard: block protected application features
+    if (user.mustChangePassword) {
+      const allowedPaths = [
+        '/api/auth/me',
+        '/api/auth/change-password',
+        '/api/auth/logout',
+        '/me',
+        '/change-password',
+        '/logout'
+      ];
+      const targetUrl = (req.originalUrl || req.url || '').split('?')[0];
+      const isAllowed = allowedPaths.some((p) => targetUrl.endsWith(p));
+      if (!isAllowed) {
+        res.status(403).json({
+          success: false,
+          mustChangePassword: true,
+          message: 'Password change required. You must change your temporary password before accessing application features.'
+        });
+        return;
+      }
+    }
+
+    if (!user.role && user.userType) {
+      if (user.userType === 'ADMIN') {
+        user.role = UserRole.COLLEGE_ADMIN;
+      } else if (user.userType === 'STUDENT') {
+        user.role = UserRole.STUDENT;
+      }
     }
 
     req.user = user;

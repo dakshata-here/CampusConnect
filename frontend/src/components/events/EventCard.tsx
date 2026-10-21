@@ -120,10 +120,12 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
             {/* Date Badge */}
             <div className="text-center bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shrink-0">
               <p className="text-[10px] font-bold text-slate-400 uppercase">
-                {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                {new Date(event.date + 'T00:00:00').toLocaleString('default', { month: 'short' })}
               </p>
               <p className="text-xl font-bold leading-none text-slate-900 dark:text-slate-100">
-                {new Date(event.date).getDate()}
+                {event.endDate && event.endDate !== event.date
+                  ? `${new Date(event.date + 'T00:00:00').getDate()}-${new Date(event.endDate + 'T00:00:00').getDate()}`
+                  : new Date(event.date + 'T00:00:00').getDate()}
               </p>
             </div>
           </div>

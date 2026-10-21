@@ -16,9 +16,22 @@ import {
   ChevronRight,
   TrendingUp,
   Filter,
-  Plus
+  Plus,
+  RotateCcw
 } from 'lucide-react';
-import { formatDisplayDate, formatDisplayTime, calculateTimeRemaining } from '../../utils/calendarUtils';
+import {
+  formatDisplayDate,
+  formatDisplayTime,
+  calculateTimeRemaining,
+  formatDateToYYYYMMDD,
+  isEventPast
+} from '../../utils/calendarUtils';
+import { DashboardFilterBar } from '../common/DashboardFilterBar';
+import {
+  filterEvents,
+  DEFAULT_FILTER_CRITERIA,
+  EventFilterCriteria
+} from '../../utils/filterUtils';
 
 export const StudentDashboard: React.FC = () => {
   const {
@@ -26,14 +39,26 @@ export const StudentDashboard: React.FC = () => {
     events,
     registrations,
     clubs,
+    venues,
     certificates,
     setSelectedEventForModal,
     setActiveTab,
     setSelectedCertificate,
-    setIsCreateEventOpen
+    setIsCreateEventOpen,
+    searchQuery
   } = useApp();
 
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filters, setFilters] = useState<EventFilterCriteria>({
+    ...DEFAULT_FILTER_CRITERIA,
+    searchQuery: searchQuery || ''
+  });
+
+  // Sync with global navbar search input
+  React.useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== filters.searchQuery) {
+      setFilters((prev) => ({ ...prev, searchQuery }));
+    }
+  }, [searchQuery]);
 
   // Compute student specific metrics
   const userRegs = registrations.filter((r) => r.studentId === currentUser.id);
@@ -43,7 +68,13 @@ export const StudentDashboard: React.FC = () => {
 
   // Next upcoming registered event
   const upcomingRegisteredEvents = events
-    .filter((e) => registeredEventIds.includes(e.id) && e.status !== 'completed' && e.status !== 'cancelled')
+    .filter(
+      (e) =>
+        registeredEventIds.includes(e.id) &&
+        !isEventPast(e) &&
+        (e.status || '').toLowerCase() !== 'completed' &&
+        (e.status || '').toLowerCase() !== 'cancelled'
+    )
     .sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
 
   const nextRegisteredEvent = upcomingRegisteredEvents[0];
@@ -51,26 +82,34 @@ export const StudentDashboard: React.FC = () => {
     ? calculateTimeRemaining(nextRegisteredEvent.date, nextRegisteredEvent.startTime)
     : null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatDateToYYYYMMDD(new Date());
   const upcomingTodayCount = events.filter(
-    (e) => e.date === todayStr && ['published', 'approved', 'registration_open'].includes(e.status)
+    (e) =>
+      !isEventPast(e) &&
+      (e.date === todayStr || (e.endDate && e.date <= todayStr && e.endDate >= todayStr)) &&
+      ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase())
   ).length;
 
   // Filtered upcoming public events
   const publishedEvents = events.filter(
-    (e) => ['published', 'approved', 'registration_open'].includes(e.status) && e.status !== 'cancelled'
+    (e) =>
+      !isEventPast(e) &&
+      ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase()) &&
+      (e.status || '').toLowerCase() !== 'cancelled'
   );
-  
-  const filteredEvents = publishedEvents.filter((e) => {
-    if (e.status === 'cancelled') return false;
-    if (filterType === 'all') return true;
-    if (filterType === 'hackathons') return ['Hackathon', 'Ideathon', 'Competition'].includes(e.eventType);
-    if (filterType === 'workshops') return ['Workshop', 'SIG Session', 'Technical Event'].includes(e.eventType);
-    if (filterType === 'academic') return e.category === 'academic';
-    return true;
+
+  const filteredEvents = filterEvents(publishedEvents, filters, {
+    userRole: 'student',
+    enforceApprovedOnly: true
   });
 
-  const featuredEvents = events.filter((e) => (e.isDontMiss || e.currentRegistrations > 100) && e.status !== 'cancelled');
+  const featuredEvents = events.filter(
+    (e) =>
+      !isEventPast(e) &&
+      (e.isDontMiss || (e.currentRegistrations && e.currentRegistrations > 100)) &&
+      ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase()) &&
+      (e.status || '').toLowerCase() !== 'cancelled'
+  );
 
   return (
     <div className="space-y-8">
@@ -265,45 +304,47 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Main Events Feed & Filter */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Campus Activities
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Browse approved club events, academic milestones, and workshops
-            </p>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium overflow-x-auto">
-            {[
-              { id: 'all', label: 'All Activities' },
-              { id: 'workshops', label: 'Workshops & SIGs' },
-              { id: 'hackathons', label: 'Hackathons & Contests' },
-              { id: 'academic', label: 'Exams & Academic' }
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilterType(f.id)}
-                className={`px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                  filterType === f.id
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            Campus Activities
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Browse approved club events, academic milestones, and workshops
+          </p>
         </div>
+
+        {/* Reusable Dashboard Filter Toolbar */}
+        <DashboardFilterBar
+          filters={filters}
+          onFilterChange={setFilters}
+          onReset={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+          clubs={clubs}
+          venues={venues}
+          totalCount={publishedEvents.length}
+          filteredCount={filteredEvents.length}
+          userRole="student"
+          showStatusFilter={false}
+          showClubFilter={true}
+          showVenueFilter={true}
+          showDateFilter={true}
+          placeholderSearch="Search activities by title, club, venue, or keyword..."
+        />
 
         {/* Events Grid */}
         {filteredEvents.length === 0 ? (
-          <div className="p-12 text-center dashboard-card rounded-3xl border space-y-2">
+          <div className="p-12 text-center dashboard-card rounded-3xl border space-y-3">
             <Calendar className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto" />
-            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300">No events found in this category</h3>
-            <p className="text-xs text-slate-400">Try switching to 'All Activities' or checking the calendar.</p>
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">No events found matching your filters</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Try adjusting your search terms, selecting another club or category, or clearing filters.
+            </p>
+            <button
+              onClick={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

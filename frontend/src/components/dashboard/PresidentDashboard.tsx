@@ -21,10 +21,19 @@ import {
   Edit3,
   Send,
   X,
+  XCircle,
   Mail,
   Download
 } from 'lucide-react';
-import { formatDisplayDate, formatDisplayTime, detectEventConflicts } from '../../utils/calendarUtils';
+import { formatDisplayDate, formatDisplayTime, detectEventConflicts, isEventPast } from '../../utils/calendarUtils';
+import { downloadEventRegistrationsCsv, downloadEventRegistrationsPdf } from '../../utils/api';
+import { DashboardFilterBar } from '../common/DashboardFilterBar';
+import {
+  filterEvents,
+  DEFAULT_FILTER_CRITERIA,
+  EventFilterCriteria,
+  matchesClubIdentity
+} from '../../utils/filterUtils';
 
 export const PresidentDashboard: React.FC = () => {
   const {
@@ -32,6 +41,7 @@ export const PresidentDashboard: React.FC = () => {
     events,
     registrations,
     clubs,
+    venues,
     certificates,
     setSelectedEventForApproval,
     setSelectedEventForModal,
@@ -41,8 +51,31 @@ export const PresidentDashboard: React.FC = () => {
     resubmitEventProposal
   } = useApp();
 
-  const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
-  const clubEvents = events.filter((e) => e.clubId === myClub.id && e.status !== 'cancelled');
+  const myClub =
+    clubs.find(
+      (c) =>
+        c.id === currentUser.clubId ||
+        (c as any)._id === currentUser.clubId ||
+        (currentUser.clubName &&
+          (c.name.toLowerCase() === currentUser.clubName.toLowerCase() ||
+            (c.shortName && c.shortName.toLowerCase() === currentUser.clubName.toLowerCase())))
+    ) || clubs[0];
+
+  const clubEvents = events.filter((e) => {
+    return (
+      matchesClubIdentity(e, myClub?.id || '') ||
+      (myClub?.name ? matchesClubIdentity(e, myClub.name) : false) ||
+      (currentUser.clubId ? matchesClubIdentity(e, currentUser.clubId) : false) ||
+      (currentUser.clubName ? matchesClubIdentity(e, currentUser.clubName) : false)
+    );
+  });
+
+  // Local filter criteria for published/completed events
+  const [filters, setFilters] = useState<EventFilterCriteria>(DEFAULT_FILTER_CRITERIA);
+
+  const filteredClubEvents = filterEvents(clubEvents, filters, {
+    userRole: 'president'
+  });
 
   // Local state for requesting changes on an approved event
   const [changeModalEvent, setChangeModalEvent] = useState<CampusEvent | null>(null);
@@ -52,33 +85,10 @@ export const PresidentDashboard: React.FC = () => {
   const handleDownloadRegistrations = async (evt: CampusEvent) => {
     setDownloadingEventId(evt.id);
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
-      const response = await fetch(`/api/events/${evt.id}/registrations/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      }).catch(() => null);
-
-      const contentType = response?.headers?.get('content-type') || '';
-
-      if (response && response.ok && !contentType.includes('text/html')) {
-        const blob = await response.blob();
-        const csvBlob = new Blob([blob], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(csvBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        const filenameHeader = response.headers.get('content-disposition');
-        let filename = `Event_${evt.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.csv`;
-        if (filenameHeader && filenameHeader.includes('filename=')) {
-          const match = filenameHeader.match(/filename="?([^";]+)"?/);
-          if (match && match[1]) {
-            filename = match[1].trim();
-          }
-        }
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (/^[0-9a-fA-F]{24}$/.test(evt.id)) {
+        await downloadEventRegistrationsCsv(evt.id, evt.title);
       } else {
+        // Fallback only for offline demo mock events
         const eventRegs = registrations.filter((r) => r.eventId === evt.id);
         const escapeCsv = (val: any): string => {
           if (val === null || val === undefined) return '""';
@@ -119,8 +129,9 @@ export const PresidentDashboard: React.FC = () => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to download registration documentation', err);
+      alert(err.message || 'Failed to download registration CSV.');
     } finally {
       setDownloadingEventId(null);
     }
@@ -131,37 +142,14 @@ export const PresidentDashboard: React.FC = () => {
   const handleDownloadRegistrationsPdf = async (evt: CampusEvent) => {
     setDownloadingPdfEventId(evt.id);
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
-      const response = await fetch(`/api/events/${evt.id}/registrations/download/pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      const contentType = response.headers.get('content-type') || '';
-
-      if (response && response.ok && !contentType.includes('text/html') && contentType.includes('application/pdf')) {
-        const blob = await response.blob();
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        const filenameHeader = response.headers.get('content-disposition');
-        let filename = `CampusConnect_${evt.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Registered_Students.pdf`;
-        if (filenameHeader && filenameHeader.includes('filename=')) {
-          const match = filenameHeader.match(/filename="?([^";]+)"?/);
-          if (match && match[1]) {
-            filename = match[1].trim();
-          }
-        }
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (/^[0-9a-fA-F]{24}$/.test(evt.id)) {
+        await downloadEventRegistrationsPdf(evt.id, evt.title);
       } else {
-        console.error('Failed to download PDF registration documentation: invalid response or unauthorized', response?.status);
+        alert('PDF registration documentation requires an active server event with valid database ID.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to download registration PDF documentation', err);
+      alert(err.message || 'Failed to download registration PDF.');
     } finally {
       setDownloadingPdfEventId(null);
     }
@@ -169,10 +157,18 @@ export const PresidentDashboard: React.FC = () => {
 
   // Status breakdown
   const pendingProposals = clubEvents.filter(
-    (e) => e.status === 'pending_approval' || e.status === 'changes_requested'
+    (e) =>
+      (e.status || '').toLowerCase() === 'pending_approval' ||
+      (e.status || '').toLowerCase() === 'changes_requested' ||
+      (e.status || '').toLowerCase() === 'rejected'
   );
-  const publishedEvents = clubEvents.filter((e) => ['published', 'approved', 'registration_open'].includes(e.status));
-  const completedEvents = clubEvents.filter((e) => e.status === 'completed');
+  const publishedEvents = clubEvents.filter((e) =>
+    !isEventPast(e) &&
+    ['published', 'approved', 'registration_open'].includes((e.status || '').toLowerCase())
+  );
+  const completedEvents = clubEvents.filter(
+    (e) => (e.status || '').toLowerCase() === 'completed' || isEventPast(e)
+  );
 
   // Club registration stats
   const clubEventIds = clubEvents.map((e) => e.id);
@@ -467,6 +463,16 @@ export const PresidentDashboard: React.FC = () => {
                           "{evt.changeComments?.[0] || 'Please review proposal details.'}"
                         </p>
                       </div>
+                    ) : evt.status === 'rejected' ? (
+                      <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200 space-y-1">
+                        <div className="font-bold flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
+                          <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          <span>Proposal Rejected by Admin:</span>
+                        </div>
+                        <p className="italic text-rose-800 dark:text-rose-300 line-clamp-2">
+                          "{evt.rejectionReason || 'No specific reason provided.'}"
+                        </p>
+                      </div>
                     ) : (
                       <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -484,15 +490,19 @@ export const PresidentDashboard: React.FC = () => {
 
                   <button
                     onClick={() => setSelectedEventForApproval(evt)}
-                    className={`w-full py-2 px-3 rounded-lg font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`w-full py-2 px-3 rounded-lg font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                       isChangesRequested
                         ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                        : evt.status === 'rejected'
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                         : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     <span>
                       {isChangesRequested
                         ? "Review & Resubmit for Admin's Approval"
+                        : evt.status === 'rejected'
+                        ? 'View Rejection Details'
                         : 'View Proposal Status'}
                     </span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -515,14 +525,37 @@ export const PresidentDashboard: React.FC = () => {
           </p>
         </div>
 
+        {/* Dashboard Filter Toolbar */}
+        <DashboardFilterBar
+          filters={filters}
+          onFilterChange={setFilters}
+          onReset={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+          venues={venues}
+          totalCount={clubEvents.length}
+          filteredCount={filteredClubEvents.length}
+          userRole="president"
+          showClubFilter={false}
+          showStatusFilter={true}
+          showCategoryFilter={true}
+          showVenueFilter={true}
+          showDateFilter={true}
+          placeholderSearch="Search club events by title, venue, or keyword..."
+        />
+
         <div className="dashboard-card rounded-xl border overflow-hidden">
-          {clubEvents.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
-              No active or published events for this club.
+          {filteredClubEvents.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
+              <p>No club events found matching the selected filters.</p>
+              <button
+                onClick={() => setFilters(DEFAULT_FILTER_CRITERIA)}
+                className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+              >
+                Reset Filters
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-blue-100/70 dark:divide-slate-800">
-              {clubEvents.map((evt) => (
+              {filteredClubEvents.map((evt) => (
               <div
                 key={evt.id}
                 className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-sky-50/50 dark:hover:bg-slate-800/40 transition-colors"

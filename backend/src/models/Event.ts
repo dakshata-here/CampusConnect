@@ -47,6 +47,7 @@ export interface IEvent extends Document {
   posterTheme: string;
   posterUrl: string;
   date: Date;
+  endDate?: Date | null;
   startTime: string;
   endTime: string;
   venueId?: Types.ObjectId | null;
@@ -131,6 +132,10 @@ const EventSchema = new Schema<IEvent>(
     date: {
       type: Date,
       required: [true, 'Event date is required']
+    },
+    endDate: {
+      type: Date,
+      default: null
     },
     startTime: {
       type: String,

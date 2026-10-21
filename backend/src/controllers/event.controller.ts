@@ -9,6 +9,11 @@ import { UserRole } from '../models/User.js';
 import { isAuthorizedLeadOrAdmin } from './clubMembership.controller.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { generateEventRegistrationsPdf } from '../utils/registrationPdfService.js';
+import {
+  checkVenueConflict,
+  timeStringToMinutes
+} from '../utils/venueConflict.js';
+import { isEventPast } from '../utils/eventTimeUtils.js';
 
 /**
  * POST /api/events
@@ -48,6 +53,7 @@ export const createEvent = async (
       posterTheme,
       posterUrl,
       date,
+      endDate,
       startTime,
       endTime,
       venueId,
@@ -83,7 +89,11 @@ export const createEvent = async (
       return;
     }
 
-    if (!category || !Object.values(EventCategory).includes(category)) {
+    const normalizedCategory = typeof category === 'string'
+      ? (category.trim().toUpperCase() as EventCategory)
+      : category;
+
+    if (!normalizedCategory || !Object.values(EventCategory).includes(normalizedCategory)) {
       res.status(400).json({
         success: false,
         message: `Event category is required and must be one of: ${Object.values(EventCategory).join(', ')}`
@@ -108,6 +118,25 @@ export const createEvent = async (
       return;
     }
 
+    let parsedEndDate: Date | null = null;
+    if (endDate) {
+      parsedEndDate = new Date(endDate);
+      if (isNaN(parsedEndDate.getTime())) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid event end date format.'
+        });
+        return;
+      }
+      if (parsedEndDate < parsedDate) {
+        res.status(400).json({
+          success: false,
+          message: 'Event end date cannot be before start date.'
+        });
+        return;
+      }
+    }
+
     if (!startTime || typeof startTime !== 'string' || !startTime.trim()) {
       res.status(400).json({
         success: false,
@@ -124,10 +153,21 @@ export const createEvent = async (
       return;
     }
 
+    const startMinutes = timeStringToMinutes(startTime);
+    const endMinutes = timeStringToMinutes(endTime);
+    const isSingleDayOrSameDate = !parsedEndDate || parsedEndDate.getTime() === parsedDate.getTime();
+    if (isSingleDayOrSameDate && endMinutes <= startMinutes) {
+      res.status(400).json({
+        success: false,
+        message: 'End time must be after start time.'
+      });
+      return;
+    }
+
     // 2. Validate category & club authorization
     let validatedClubId: mongoose.Types.ObjectId | null = null;
 
-    if (category === EventCategory.CLUB) {
+    if (normalizedCategory === EventCategory.CLUB) {
       if (!clubId) {
         res.status(400).json({
           success: false,
@@ -166,7 +206,7 @@ export const createEvent = async (
       }
 
       validatedClubId = new mongoose.Types.ObjectId(clubId);
-    } else if (category === EventCategory.ACADEMIC) {
+    } else if (normalizedCategory === EventCategory.ACADEMIC) {
       // Presidents cannot create academic events unless they are college_admin
       if (user.role === UserRole.CLUB_PRESIDENT) {
         res.status(403).json({
@@ -218,6 +258,24 @@ export const createEvent = async (
       }
 
       validatedVenueId = new mongoose.Types.ObjectId(venueId);
+
+      // Check venue conflicts against existing approved events
+      const conflictResult = await checkVenueConflict({
+        venueId: validatedVenueId,
+        date: parsedDate,
+        startTime: startTime.trim(),
+        endTime: endTime.trim(),
+        maxParticipants: maxParticipants !== undefined && maxParticipants !== null ? Number(maxParticipants) : null
+      });
+
+      if (conflictResult.hasConflict) {
+        res.status(409).json({
+          success: false,
+          message: conflictResult.message || 'Venue conflict detected: Venue is already booked or unavailable.',
+          conflict: conflictResult
+        });
+        return;
+      }
     }
 
     // 4. Validate registrationMethod if provided
@@ -229,13 +287,24 @@ export const createEvent = async (
       return;
     }
 
-    // 5. Validate status if provided
-    if (status && !Object.values(EventStatus).includes(status)) {
-      res.status(400).json({
-        success: false,
-        message: `Invalid event status. Must be one of: ${Object.values(EventStatus).join(', ')}`
-      });
-      return;
+    // 5. Validate status if provided, or resolve based on role
+    let resolvedStatus: EventStatus = EventStatus.DRAFT;
+    if (status) {
+      const upperStatus = String(status).toUpperCase();
+      if (!Object.values(EventStatus).includes(upperStatus as EventStatus)) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid event status. Must be one of: ${Object.values(EventStatus).join(', ')}`
+        });
+        return;
+      }
+      resolvedStatus = upperStatus as EventStatus;
+    } else {
+      if (user.role === UserRole.CLUB_PRESIDENT) {
+        resolvedStatus = EventStatus.PENDING_APPROVAL;
+      } else if (user.role === UserRole.COLLEGE_ADMIN) {
+        resolvedStatus = EventStatus.APPROVED;
+      }
     }
 
     // 6. Validate maxParticipants if provided
@@ -254,13 +323,14 @@ export const createEvent = async (
     const newEvent = new Event({
       title: title.trim(),
       eventType: eventType.trim(),
-      category,
+      category: normalizedCategory,
       shortDescription: shortDescription || '',
       description: description || '',
       agenda: agenda || '',
       posterTheme: posterTheme || '',
       posterUrl: posterUrl || '',
       date: parsedDate,
+      endDate: parsedEndDate,
       startTime: startTime.trim(),
       endTime: endTime.trim(),
       venueId: validatedVenueId,
@@ -277,7 +347,7 @@ export const createEvent = async (
       contactPerson: contactPerson || '',
       contactEmail: contactEmail || '',
       contactPhone: contactPhone || '',
-      status: status || EventStatus.DRAFT
+      status: resolvedStatus
     });
 
     await newEvent.save();
@@ -295,10 +365,10 @@ export const createEvent = async (
 /**
  * GET /api/events
  * Access: Authenticated (student, president, college_admin)
- * Returns list of events.
+ * Returns list of events. Filters out past events unless includePast=true or history=true.
  */
 export const getEvents = async (
-  _req: AuthenticatedRequest,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -309,10 +379,13 @@ export const getEvents = async (
       .populate('proposedBy', 'name email role')
       .sort({ date: 1, startTime: 1 });
 
+    const includePast = req.query.includePast === 'true' || req.query.history === 'true';
+    const activeEvents = includePast ? events : events.filter((e) => !isEventPast(e));
+
     res.status(200).json({
       success: true,
-      count: events.length,
-      events: events.map((e) => e.toJSON())
+      count: activeEvents.length,
+      events: activeEvents.map((e) => e.toJSON())
     });
   } catch (error) {
     next(error);
@@ -532,6 +605,22 @@ export const updateEvent = async (
       event.date = parsedDate;
     }
 
+    if (req.body.endDate !== undefined) {
+      if (req.body.endDate === null || req.body.endDate === '') {
+        event.endDate = null;
+      } else {
+        const parsedEndDate = new Date(req.body.endDate);
+        if (isNaN(parsedEndDate.getTime())) {
+          res.status(400).json({
+            success: false,
+            message: 'Invalid event end date format.'
+          });
+          return;
+        }
+        event.endDate = parsedEndDate;
+      }
+    }
+
     if (req.body.maxParticipants !== undefined) {
       if (req.body.maxParticipants === null || req.body.maxParticipants === '') {
         event.maxParticipants = null;
@@ -744,6 +833,27 @@ export const approveEvent = async (
       return;
     }
 
+    // Check venue conflicts against other approved events before approving
+    if (event.venueId) {
+      const conflictResult = await checkVenueConflict({
+        venueId: event.venueId,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        maxParticipants: event.maxParticipants,
+        excludeEventId: event._id
+      });
+
+      if (conflictResult.hasConflict) {
+        res.status(409).json({
+          success: false,
+          message: conflictResult.message || 'Cannot approve event: Venue conflict detected with another approved event.',
+          conflict: conflictResult
+        });
+        return;
+      }
+    }
+
     // Update event status
     event.status = EventStatus.APPROVED;
     const comments = req.body?.comments || '';
@@ -844,13 +954,18 @@ export const rejectEvent = async (
       return;
     }
 
-    const comments = req.body?.reason || req.body?.rejectionReason || req.body?.comments || '';
+    const comments = (req.body?.reason || req.body?.rejectionReason || req.body?.comments || '').trim();
+    if (!comments) {
+      res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required. Please specify a reason for rejecting the event.'
+      });
+      return;
+    }
 
     // Update event status
     event.status = EventStatus.REJECTED;
-    if (comments) {
-      event.rejectionReason = comments;
-    }
+    event.rejectionReason = comments;
     await event.save();
 
     // Create Approval record

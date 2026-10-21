@@ -25,10 +25,15 @@ import {
   Phone,
   GraduationCap,
   Briefcase,
-  HelpCircle
+  HelpCircle,
+  X,
+  Key,
+  Info
 } from 'lucide-react';
+import { changePasswordApi, forgotPasswordApi, resetPasswordApi, clearToken } from '../../utils/api';
 
-export const ADMIN_SECURITY_QUESTIONS = [
+
+const ADMIN_SECURITY_QUESTIONS = [
   'Which is your favourite book?',
   'Who is your role model?',
   'Which is your favourite subject?',
@@ -36,7 +41,7 @@ export const ADMIN_SECURITY_QUESTIONS = [
   'What is your favourite research domain or hobby?'
 ];
 
-export const DEFAULT_ADMIN_ANSWERS: Record<string, string> = {
+const DEFAULT_ADMIN_ANSWERS: Record<string, string> = {
   'Which is your favourite book?': 'Wings of Fire',
   'Who is your role model?': 'Dr. A. P. J. Abdul Kalam',
   'Which is your favourite subject?': 'Computer Networks & Security',
@@ -56,8 +61,43 @@ export const LoginPage: React.FC = () => {
     setActiveTab,
     isDarkMode,
     toggleDarkMode,
-    clubs
+    clubs,
+    pendingPasswordChange,
+    setPendingPasswordChange,
+    completePasswordChange
   } = useApp();
+
+  // Credential Recovery Modal State (Administrator-Managed Recovery)
+  const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
+  const [recoveryTab, setRecoveryTab] = useState<'request' | 'reset'>('request');
+  const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryFeedback, setRecoveryFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Reset Token Form State
+  const [resetToken, setResetToken] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetShowPassword, setResetShowPassword] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Mandatory First-Time Password Change State
+  const [changeCurrentPassword, setChangeCurrentPassword] = useState('');
+  const [changeNewPassword, setChangeNewPassword] = useState('');
+  const [changeConfirmPassword, setChangeConfirmPassword] = useState('');
+  const [changeShowPassword, setChangeShowPassword] = useState(false);
+  const [changeLoading, setChangeLoading] = useState(false);
+  const [changeError, setChangeError] = useState('');
+  const [changeSuccess, setChangeSuccess] = useState('');
+
+  // Sync temporary password when pendingPasswordChange arrives
+  useEffect(() => {
+    if (pendingPasswordChange?.currentPassword) {
+      setChangeCurrentPassword(pendingPasswordChange.currentPassword);
+    }
+  }, [pendingPasswordChange]);
+
 
   // Mode: 'login' or 'register'
   const [viewMode, setViewMode] = useState<'login' | 'register'>('login');
@@ -66,7 +106,7 @@ export const LoginPage: React.FC = () => {
   const [activeLoginRole, setActiveLoginRole] = useState<'student' | 'lead' | 'admin'>('student');
 
   // Student Login Fields (PRN + Password + Captcha)
-  const [studentPrn, setStudentPrn] = useState('C2K2310142');
+  const [studentPrn, setStudentPrn] = useState('PRN002');
   const [studentPassword, setStudentPassword] = useState('Admin@123');
   const [studentShowPassword, setStudentShowPassword] = useState(false);
   const [studentCaptchaChecked, setStudentCaptchaChecked] = useState(false);
@@ -74,10 +114,10 @@ export const LoginPage: React.FC = () => {
 
   // Lead Login Fields (Student/Faculty selector + ID + Club + Password + Captcha)
   const [leadUserType, setLeadUserType] = useState<'student' | 'faculty'>('student');
-  const [leadStudentPrn, setLeadStudentPrn] = useState('C2K2210012');
-  const [leadFacultyId, setLeadFacultyId] = useState('PICT-FAC-401');
-  const [leadClub, setLeadClub] = useState(clubs[0]?.name || 'PICT ACM Student Chapter');
-  const [leadPassword, setLeadPassword] = useState('Lead@2026');
+  const [leadStudentPrn, setLeadStudentPrn] = useState('PRN001');
+  const [leadFacultyId, setLeadFacultyId] = useState('FAC001');
+  const [leadClub, setLeadClub] = useState(clubs[0]?.name || 'NSS Club');
+  const [leadPassword, setLeadPassword] = useState('Admin@123');
   const [leadShowPassword, setLeadShowPassword] = useState(false);
   const [leadCaptchaChecked, setLeadCaptchaChecked] = useState(false);
   const [leadCaptchaLoading, setLeadCaptchaLoading] = useState(false);
@@ -88,8 +128,8 @@ export const LoginPage: React.FC = () => {
     }
   }, [clubs, leadClub]);
   // Admin Login Fields (Faculty ID + Password + 2-Step Security Verification + Captcha)
-  const [adminFacultyId, setAdminFacultyId] = useState('PICT-ADM-108');
-  const [adminPassword, setAdminPassword] = useState('PictAdmin@2026');
+  const [adminFacultyId, setAdminFacultyId] = useState('ADM001');
+  const [adminPassword, setAdminPassword] = useState('Admin@123');
   const [adminShowPassword, setAdminShowPassword] = useState(false);
   // Any one of the 5 security questions is selected automatically by the website
   const [initialAdminQIndex] = useState(() => Math.floor(Math.random() * ADMIN_SECURITY_QUESTIONS.length));
@@ -111,8 +151,8 @@ export const LoginPage: React.FC = () => {
   // -------------------------------------------------------------
   // 1. Full name
   const [regFullName, setRegFullName] = useState('');
-  // 2. Role (Student, Club Lead, Admin)
-  const [regRole, setRegRole] = useState<'student' | 'lead' | 'admin'>('student');
+  // 2. Role (Club Lead, Admin)
+  const [regRole, setRegRole] = useState<'lead' | 'admin'>('lead');
   // Club Lead specific registration options
   const [regLeadType, setRegLeadType] = useState<'student' | 'faculty'>('student');
   const [regSelectedClub, setRegSelectedClub] = useState(clubs[0]?.name || 'PICT ACM Student Chapter');
@@ -181,12 +221,9 @@ export const LoginPage: React.FC = () => {
     setSuccessMessage('');
   };
 
-  const handleOpenRegistration = (preselectedRole?: 'student' | 'lead' | 'admin') => {
-    if (preselectedRole) {
-      setRegRole(preselectedRole);
-    } else {
-      setRegRole(activeLoginRole);
-    }
+  const handleOpenRegistration = (preselectedRole?: 'lead' | 'admin') => {
+    const roleToSet: 'lead' | 'admin' = preselectedRole || (activeLoginRole === 'admin' ? 'admin' : 'lead');
+    setRegRole(roleToSet);
     setViewMode('register');
     setErrorMessage('');
     setSuccessMessage('');
@@ -221,8 +258,129 @@ export const LoginPage: React.FC = () => {
   const currentAdminQuestion = activeAdminQA[adminQuestionIndex]?.question || ADMIN_SECURITY_QUESTIONS[0];
   const expectedAdminAnswer = activeAdminQA[adminQuestionIndex]?.answer || DEFAULT_ADMIN_ANSWERS[currentAdminQuestion];
 
+  // Credential Recovery Handlers (Administrator-Managed Recovery)
+  const handleRecoveryRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryIdentifier.trim()) {
+      setRecoveryFeedback({ type: 'error', message: 'Please enter your PRN, Employee ID, or institutional email.' });
+      return;
+    }
+    setRecoveryLoading(true);
+    setRecoveryFeedback(null);
+    try {
+      const res = await forgotPasswordApi(recoveryIdentifier.trim());
+      setRecoveryFeedback({
+        type: 'success',
+        message: res.message || 'Recovery request registered. Please contact your College Administrator to obtain your verified 15-minute reset token.'
+      });
+    } catch (err: any) {
+      setRecoveryFeedback({
+        type: 'error',
+        message: err.message || 'Failed to submit recovery request.'
+      });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const handleResetWithToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetFeedback(null);
+    if (!resetToken.trim()) {
+      setResetFeedback({ type: 'error', message: 'Please enter the reset token.' });
+      return;
+    }
+    if (resetNewPassword.length < 8) {
+      setResetFeedback({ type: 'error', message: 'New password must be at least 8 characters long.' });
+      return;
+    }
+    if (!(/[a-zA-Z]/.test(resetNewPassword) && /[0-9]/.test(resetNewPassword))) {
+      setResetFeedback({ type: 'error', message: 'New password must contain both letters and numbers.' });
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetFeedback({ type: 'error', message: 'Passwords do not match.' });
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await resetPasswordApi({
+        token: resetToken.trim(),
+        newPassword: resetNewPassword
+      });
+      setResetFeedback({
+        type: 'success',
+        message: res.message || 'Password reset successfully! Please log in with your new password.'
+      });
+      setResetToken('');
+      setResetNewPassword('');
+      setResetConfirmPassword('');
+    } catch (err: any) {
+      setResetFeedback({
+        type: 'error',
+        message: err.message || 'Failed to reset password. Please verify the token is valid and unexpired.'
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Mandatory Password Change Handlers
+  const handleMandatoryPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangeError('');
+    setChangeSuccess('');
+
+    if (!changeCurrentPassword) {
+      setChangeError('Please enter your current temporary password.');
+      return;
+    }
+    if (changeNewPassword.length < 8) {
+      setChangeError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (!(/[a-zA-Z]/.test(changeNewPassword) && /[0-9]/.test(changeNewPassword))) {
+      setChangeError('New password must contain both letters and numbers.');
+      return;
+    }
+    if (changeNewPassword === changeCurrentPassword) {
+      setChangeError('New password must be different from your current temporary password.');
+      return;
+    }
+    if (changeNewPassword !== changeConfirmPassword) {
+      setChangeError('New passwords do not match.');
+      return;
+    }
+
+    setChangeLoading(true);
+    try {
+      const res = await changePasswordApi({
+        currentPassword: changeCurrentPassword,
+        newPassword: changeNewPassword
+      });
+      setChangeSuccess('Password updated successfully! Unlocking campus portal...');
+      setTimeout(async () => {
+        await completePasswordChange(res.user, res.token);
+      }, 700);
+    } catch (err: any) {
+      setChangeError(err.message || 'Failed to update password.');
+    } finally {
+      setChangeLoading(false);
+    }
+  };
+
+  const handleCancelPasswordChange = () => {
+    clearToken();
+    setPendingPasswordChange(null);
+    setChangeCurrentPassword('');
+    setChangeNewPassword('');
+    setChangeConfirmPassword('');
+    setChangeError('');
+    setChangeSuccess('');
+  };
+
   // 1. STUDENT LOGIN SUBMISSION
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -241,16 +399,14 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    const success = loginUser(studentPrn.trim(), 'student');
-    if (success) {
-      setActiveTab('dashboard');
-    } else {
-      setErrorMessage('Invalid student credentials. Please check your PRN.');
+    const res = await loginUser(studentPrn.trim(), 'student', studentPassword);
+    if (!res.success) {
+      setErrorMessage(res.message || 'Invalid student credentials. Please check your PRN and Password.');
     }
   };
 
   // 2. CLUB LEAD LOGIN SUBMISSION
-  const handleLeadSubmit = (e: React.FormEvent) => {
+  const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -304,70 +460,17 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    const selectedClubObj = clubs.find((c) => c.name === leadClub || c.id === leadClub) || clubs[0];
-
-    const matchedUser = allUsers.find(
-      (u) =>
-        u.email.toLowerCase() === idToUse.toLowerCase() ||
-        (u.enrollmentNumber && u.enrollmentNumber.toLowerCase() === idToUse.toLowerCase())
-    );
-
-    const fallbackPres = allUsers.find((u) => u.role === 'president') || {
-      id: 'user_pres_fallback',
-      name: 'Aditya Kulkarni',
-      email: 'ieee.president@pict.edu',
-      enrollmentNumber: 'C2K2210012',
-      role: 'president' as const,
-      department: 'Computer Engineering',
-      year: 'BE (4th Year)',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-      followedClubs: ['club_ieee'],
-      phone: '+91 98811 22334'
-    };
-
-    let targetUser: AppUser;
-    if (matchedUser) {
-      targetUser = {
-        ...matchedUser,
-        role: matchedUser.role === 'student' ? 'president' : matchedUser.role,
-        leadType: leadUserType,
-        clubId: selectedClubObj.id,
-        clubName: selectedClubObj.name,
-        ...(leadUserType === 'faculty'
-          ? {
-              year: 'Faculty Coordinator',
-              department: matchedUser.department || 'Computer Engineering'
-            }
-          : {})
-      };
-    } else {
-      targetUser = {
-        ...fallbackPres,
-        id: `user_lead_${Date.now()}`,
-        name:
-          leadUserType === 'faculty'
-            ? selectedClubObj.facultyCoordinator || 'Prof. S. R. Hiray'
-            : fallbackPres.name,
-        email:
-          leadUserType === 'faculty'
-            ? `faculty.${selectedClubObj.id.replace('club_', '')}@pict.edu`
-            : fallbackPres.email,
-        enrollmentNumber: idToUse,
-        role: 'president',
-        leadType: leadUserType,
-        department: leadUserType === 'faculty' ? 'Faculty Advisor' : fallbackPres.department,
-        year: leadUserType === 'faculty' ? 'Faculty Coordinator' : fallbackPres.year,
-        clubId: selectedClubObj.id,
-        clubName: selectedClubObj.name
-      };
+    const res = await loginUser(idToUse, 'president', leadPassword, undefined, leadClub.trim());
+    if (res.success) {
+      setActiveTab('dashboard');
+      return;
     }
 
-    setCurrentUser(targetUser);
-    setActiveTab('dashboard');
+    setErrorMessage(res.message || 'Invalid club lead credentials. Please check your ID, Club, and Password.');
   };
 
   // 3. ADMIN LOGIN SUBMISSION (Employee ID + Password + Two-Step Verification)
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -377,7 +480,7 @@ export const LoginPage: React.FC = () => {
     }
 
     if (!adminFacultyId.trim()) {
-      setErrorMessage('Please enter your Employee ID.');
+      setErrorMessage('Please enter your Employee ID or Admin Email.');
       return;
     }
 
@@ -411,27 +514,16 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    if (!adminSecurityAnswer.trim()) {
-      setErrorMessage('Please enter the two-step verification security answer.');
-      return;
-    }
-
-    // Verify security answer (case-insensitive and trimmed)
-    if (
-      expectedAdminAnswer &&
-      adminSecurityAnswer.trim().toLowerCase() !== expectedAdminAnswer.trim().toLowerCase()
-    ) {
-      setErrorMessage(
-        `Incorrect two-step security answer. (For demo admin PICT-ADM-108, answer is: "${expectedAdminAnswer}")`
-      );
-      return;
-    }
-
-    const success = loginUser(adminFacultyId.trim(), 'college_admin');
-    if (success) {
+    const res = await loginUser(
+      adminFacultyId.trim(),
+      'college_admin',
+      adminPassword,
+      adminSecurityAnswer.trim()
+    );
+    if (res.success) {
       setActiveTab('dashboard');
     } else {
-      setErrorMessage('Admin verification failed. Please check your Employee ID.');
+      setErrorMessage(res.message || 'Admin verification failed. Please check your Employee ID and password.');
     }
   };
 
@@ -571,6 +663,7 @@ export const LoginPage: React.FC = () => {
     const success = registerUser({
       name: regFullName.trim(),
       email: regEmail.trim(),
+      password: regPassword,
       role: roleToAssign,
       enrollmentNumber: regPrn.trim(),
       department: assignedDept,
@@ -771,7 +864,7 @@ export const LoginPage: React.FC = () => {
                       required
                       value={studentPrn}
                       onChange={(e) => setStudentPrn(e.target.value)}
-                      placeholder="e.g. C2K2310142"
+                      placeholder="e.g. PRN002"
                       className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 font-mono"
                     />
                   </div>
@@ -783,9 +876,18 @@ export const LoginPage: React.FC = () => {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                       Password *
                     </label>
-                    <span className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline cursor-pointer font-medium">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecoveryModalOpen(true);
+                        setRecoveryTab('request');
+                        setRecoveryFeedback(null);
+                        setResetFeedback(null);
+                      }}
+                      className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
                       Forgot Password?
-                    </span>
+                    </button>
                   </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-sky-500/80 dark:text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -902,7 +1004,7 @@ export const LoginPage: React.FC = () => {
                         required
                         value={leadStudentPrn}
                         onChange={(e) => setLeadStudentPrn(e.target.value)}
-                        placeholder="e.g. C2K2210012"
+                        placeholder="e.g. PRN001"
                         className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 font-mono"
                       />
                     </div>
@@ -919,7 +1021,7 @@ export const LoginPage: React.FC = () => {
                         required
                         value={leadFacultyId}
                         onChange={(e) => setLeadFacultyId(e.target.value)}
-                        placeholder="e.g. PICT-EMP-401"
+                        placeholder="e.g. FAC001"
                         className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 font-mono"
                       />
                     </div>
@@ -950,9 +1052,23 @@ export const LoginPage: React.FC = () => {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Password *
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecoveryModalOpen(true);
+                        setRecoveryTab('request');
+                        setRecoveryFeedback(null);
+                        setResetFeedback(null);
+                      }}
+                      className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-sky-500/80 dark:text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -1016,6 +1132,21 @@ export const LoginPage: React.FC = () => {
                   <span>Sign In as Club Lead</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+
+                {/* Club Lead New Registration Option directly below Club Lead login form */}
+                <div className="pt-3 border-t border-sky-200/60 dark:border-sky-900/60 text-center space-y-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Applying to represent or lead a student club?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRegistration('lead')}
+                    className="w-full py-2.5 px-4 rounded-xl border border-sky-200/80 dark:border-sky-800/60 bg-white/60 hover:bg-white/80 dark:bg-sky-950/40 dark:hover:bg-sky-900/60 text-sky-700 dark:text-sky-300 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs backdrop-blur-xs group"
+                  >
+                    <UserPlus className="w-4 h-4 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform" />
+                    <span>New Registration</span>
+                  </button>
+                </div>
               </form>
             )}
 
@@ -1034,7 +1165,7 @@ export const LoginPage: React.FC = () => {
                       required
                       value={adminFacultyId}
                       onChange={(e) => setAdminFacultyId(e.target.value)}
-                      placeholder="e.g. PICT-ADM-108"
+                      placeholder="e.g. ADM001 or admin@campusconnect.edu"
                       className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-950/90 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80 font-mono"
                     />
                   </div>
@@ -1042,9 +1173,23 @@ export const LoginPage: React.FC = () => {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Password *
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecoveryModalOpen(true);
+                        setRecoveryTab('request');
+                        setRecoveryFeedback(null);
+                        setResetFeedback(null);
+                      }}
+                      className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-sky-500/80 dark:text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -1052,7 +1197,7 @@ export const LoginPage: React.FC = () => {
                       required
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="Enter admin password (e.g. PictAdmin@2026)"
+                      placeholder="Enter admin password"
                       className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-9 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-950/90 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80"
                     />
                     <button
@@ -1140,24 +1285,22 @@ export const LoginPage: React.FC = () => {
                   <span>Sign In as College Administrator</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-              </form>
-            )}
 
-            {/* NEW REGISTRATION SECTION (Rendered ONLY for Club Lead and Admin tabs, NOT for Student) */}
-            {activeLoginRole !== 'student' && (
-              <div className="pt-4 border-t border-sky-200/60 dark:border-sky-900/60 text-center space-y-2.5">
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Don't have an institutional account yet?
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleOpenRegistration()}
-                  className="w-full py-2.5 px-4 rounded-xl border border-sky-200/80 dark:border-sky-800/60 bg-white/60 hover:bg-white/80 dark:bg-sky-950/40 dark:hover:bg-sky-900/60 text-sky-700 dark:text-sky-300 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs backdrop-blur-xs group"
-                >
-                  <UserPlus className="w-4 h-4 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform" />
-                <span>New Registration</span>
-              </button>
-            </div>
+                {/* Repositioned Admin New Registration Option directly below Admin login form */}
+                <div className="pt-3 border-t border-sky-200/60 dark:border-sky-900/60 text-center space-y-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Need to request a College Administrator account?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRegistration('admin')}
+                    className="w-full py-2.5 px-4 rounded-xl border border-sky-200/80 dark:border-sky-800/60 bg-white/60 hover:bg-white/80 dark:bg-sky-950/40 dark:hover:bg-sky-900/60 text-sky-700 dark:text-sky-300 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs backdrop-blur-xs group"
+                  >
+                    <UserPlus className="w-4 h-4 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform" />
+                    <span>New Registration</span>
+                  </button>
+                </div>
+              </form>
             )}
 
             {/* Bottom Security Note */}
@@ -1186,18 +1329,29 @@ export const LoginPage: React.FC = () => {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Sign In</span>
               </button>
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/70 border border-sky-200/90 dark:border-sky-800/80 text-sky-700 dark:text-sky-300 text-[11px] font-semibold">
-                <Sparkles className="w-3 h-3 text-sky-500 dark:text-sky-400" />
-                <span>Institutional Registration</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/70 border border-sky-200/90 dark:border-sky-800/80 text-sky-700 dark:text-sky-300 text-[11px] font-semibold">
+                {regRole === 'admin' ? (
+                  <>
+                    <Shield className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                    <span>College Administrator Registration</span>
+                  </>
+                ) : (
+                  <>
+                    <Briefcase className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                    <span>Club Lead Registration</span>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="space-y-1">
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                Create New Account
+                {regRole === 'admin' ? 'Administrator Registration' : 'Club Lead Registration'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Please complete the registration form to establish your verified institutional profile.
+                {regRole === 'admin'
+                  ? 'Complete the administrator registration form to establish your verified institutional profile.'
+                  : 'Submit a registration request to lead a student club or technical society.'}
               </p>
             </div>
 
@@ -1230,54 +1384,9 @@ export const LoginPage: React.FC = () => {
                     required
                     value={regFullName}
                     onChange={(e) => setRegFullName(e.target.value)}
-                    placeholder="e.g. Sneha Kulkarni"
+                    placeholder={regRole === 'admin' ? 'e.g. Dr. S. K. Kulkarni' : 'e.g. Sneha Kulkarni'}
                     className="w-full bg-white/50 dark:bg-[#070d1d]/60 backdrop-blur-xs text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200/80 dark:border-sky-900/60 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 focus:bg-white/80 dark:focus:bg-[#0a1226]/80"
                   />
-                </div>
-              </div>
-
-              {/* Role Selection (Student, Club Lead, Admin) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Role (Student, Club Lead, Admin) *
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('student')}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer backdrop-blur-xs ${
-                      regRole === 'student'
-                        ? 'border-sky-500 dark:border-sky-400 bg-sky-50/90 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold shadow-xs ring-1 ring-sky-500 dark:ring-sky-400'
-                        : 'border-sky-200/70 dark:border-sky-900/60 bg-white/50 dark:bg-[#070d1d]/50 text-slate-600 dark:text-slate-400 hover:bg-sky-50/50 dark:hover:bg-[#0a1020]'
-                    }`}
-                  >
-                    <GraduationCap className="w-3.5 h-3.5" />
-                    <span>Student</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('lead')}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer backdrop-blur-xs ${
-                      regRole === 'lead'
-                        ? 'border-sky-500 dark:border-sky-400 bg-sky-50/90 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold shadow-xs ring-1 ring-sky-500 dark:ring-sky-400'
-                        : 'border-sky-200/70 dark:border-sky-900/60 bg-white/50 dark:bg-[#070d1d]/50 text-slate-600 dark:text-slate-400 hover:bg-sky-50/50 dark:hover:bg-[#0a1020]'
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>Club Lead</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('admin')}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer backdrop-blur-xs ${
-                      regRole === 'admin'
-                        ? 'border-sky-500 dark:border-sky-400 bg-sky-50/90 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold shadow-xs ring-1 ring-sky-500 dark:ring-sky-400'
-                        : 'border-sky-200/70 dark:border-sky-900/60 bg-white/50 dark:bg-[#070d1d]/50 text-slate-600 dark:text-slate-400 hover:bg-sky-50/50 dark:hover:bg-[#0a1020]'
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Admin</span>
-                  </button>
                 </div>
               </div>
 
@@ -1406,8 +1515,8 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Year of Study & Department (only for Student and Club Lead who is Student) */}
-              {(regRole === 'student' || (regRole === 'lead' && regLeadType === 'student')) && (
+              {/* Year of Study & Department (for Club Lead who is Student) */}
+              {regRole === 'lead' && regLeadType === 'student' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Year of Study */}
                   <div>
@@ -1567,7 +1676,9 @@ export const LoginPage: React.FC = () => {
                     : 'bg-sky-600/60 dark:bg-sky-500/30 text-white/80 dark:text-slate-400 cursor-not-allowed'
                 }`}
               >
-                <span>Create Account & Enter Portal</span>
+                <span>
+                  {regRole === 'admin' ? 'Submit Administrator Registration' : 'Submit Club Lead Registration'}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -1600,6 +1711,400 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
       </footer>
+      {/* ========================================================= */}
+      {/* 1. CREDENTIAL RECOVERY MODAL (Administrator-Managed Recovery) */}
+      {/* ========================================================= */}
+      {isRecoveryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0b1329]/95 backdrop-blur-md rounded-2xl border border-sky-200/80 dark:border-sky-900/70 shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsRecoveryModalOpen(false)}
+              className="absolute right-4 top-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Account Credential Recovery
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Institutional Intranet Password Reset Service
+                </p>
+              </div>
+            </div>
+
+            {/* Network Policy & Email Delivery Disclaimer */}
+            <div className="mb-5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="leading-relaxed">
+                <p className="font-semibold mb-0.5">Campus Network Notice (Zero External Email Delivery):</p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  Public outbound SMTP email is intentionally not configured on this internal server.
+                  Password resets require verified, single-use, 15-minute expiring tokens issued directly by your College Administrator (Room 108 / admin@pict.edu).
+                </p>
+              </div>
+            </div>
+
+            {/* Recovery Tabs */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-900/60 rounded-xl mb-5 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryTab('request');
+                  setRecoveryFeedback(null);
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  recoveryTab === 'request'
+                    ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                1. Request Token
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryTab('reset');
+                  setResetFeedback(null);
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  recoveryTab === 'reset'
+                    ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                2. Reset with Token
+              </button>
+            </div>
+
+            {/* TAB 1: Request Token */}
+            {recoveryTab === 'request' && (
+              <form onSubmit={handleRecoveryRequest} className="space-y-4">
+                {recoveryFeedback && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
+                      recoveryFeedback.type === 'success'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                    }`}
+                  >
+                    {recoveryFeedback.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                    )}
+                    <span className="leading-relaxed">{recoveryFeedback.message}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Student PRN, Employee ID, or Institutional Email *
+                  </label>
+                  <div className="relative">
+                    <Hash className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={recoveryIdentifier}
+                      onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                      placeholder="e.g. C2K2310142, PICT-ADM-108, or user@pict.edu"
+                      className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200 dark:border-sky-900 focus:outline-none focus:ring-1 focus:ring-sky-400 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={recoveryLoading}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-md shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {recoveryLoading ? (
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>Record Recovery Request in Audit Log</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryTab('reset');
+                      setRecoveryFeedback(null);
+                    }}
+                    className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium"
+                  >
+                    Already have your token from College Admin? Go to Reset Form →
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB 2: Reset with Token */}
+            {recoveryTab === 'reset' && (
+              <form onSubmit={handleResetWithToken} className="space-y-3.5">
+                {resetFeedback && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
+                      resetFeedback.type === 'success'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                    }`}
+                  >
+                    {resetFeedback.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                    )}
+                    <span className="leading-relaxed">{resetFeedback.message}</span>
+                  </div>
+                )}
+
+                {/* Reset Token Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Single-Use Reset Token (15-Minute Expiry) *
+                  </label>
+                  <div className="relative">
+                    <Key className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      placeholder="Paste 64-character token issued by College Admin"
+                      className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200 dark:border-sky-900 focus:outline-none focus:ring-1 focus:ring-sky-400 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* New Password */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    New Password (Min 8 Characters, Letters & Numbers) *
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={resetShowPassword ? 'text' : 'password'}
+                      required
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="Create secure permanent password"
+                      className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-9 py-2.5 rounded-lg border border-sky-200 dark:border-sky-900 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setResetShowPassword(!resetShowPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                    >
+                      {resetShowPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Confirm New Password *
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={resetShowPassword ? 'text' : 'password'}
+                      required
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      placeholder="Repeat new password"
+                      className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-200 dark:border-sky-900 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {resetLoading ? (
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>Verify Token & Invalidate Prior Sessions</span>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 2. MANDATORY FIRST-TIME PASSWORD CHANGE MODAL */}
+      {/* ========================================================= */}
+      {pendingPasswordChange && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-white dark:bg-[#0b1329] rounded-2xl border-2 border-amber-400/80 dark:border-amber-500/80 shadow-2xl p-6 sm:p-7 text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Badge */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                  Mandatory Password Change
+                </h3>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  Temporary Credential Detected
+                </p>
+              </div>
+            </div>
+
+            {/* Targeted User Information */}
+            <div className="mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Account Name:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{pendingPasswordChange.user.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Identifier / Email:</span>
+                <span className="font-mono text-slate-700 dark:text-slate-300">{pendingPasswordChange.user.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Role:</span>
+                <span className="uppercase text-[10px] tracking-wider font-bold text-sky-600 dark:text-sky-400">
+                  {pendingPasswordChange.user.role}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+              Your account is configured with an initial or temporary credential. For security compliance and to protect institutional records, you must create a new permanent password before access to campus features is permitted.
+            </p>
+
+            {/* Form */}
+            <form onSubmit={handleMandatoryPasswordChange} className="space-y-3.5">
+              {changeError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <span>{changeError}</span>
+                </div>
+              )}
+
+              {changeSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>{changeSuccess}</span>
+                </div>
+              )}
+
+              {/* Current Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Current Temporary Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    value={changeCurrentPassword}
+                    onChange={(e) => setChangeCurrentPassword(e.target.value)}
+                    placeholder="Enter the temporary credential"
+                    className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  />
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  New Permanent Password (Min 8 Chars, Alphanumeric) *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={changeShowPassword ? 'text' : 'password'}
+                    required
+                    value={changeNewPassword}
+                    onChange={(e) => setChangeNewPassword(e.target.value)}
+                    placeholder="Choose a strong permanent password"
+                    className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-9 py-2.5 rounded-lg border border-sky-300 dark:border-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setChangeShowPassword(!changeShowPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                  >
+                    {changeShowPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Confirm New Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={changeShowPassword ? 'text' : 'password'}
+                    required
+                    value={changeConfirmPassword}
+                    onChange={(e) => setChangeConfirmPassword(e.target.value)}
+                    placeholder="Repeat permanent password"
+                    className="w-full bg-slate-50 dark:bg-[#070d1d] text-slate-900 dark:text-slate-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-sky-300 dark:border-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelPasswordChange}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-xs border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  Cancel & Sign Out
+                </button>
+                <button
+                  type="submit"
+                  disabled={changeLoading}
+                  className="flex-2 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-md shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {changeLoading ? (
+                    <RotateCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Update Password & Enter</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
