@@ -33,7 +33,9 @@ import {
   calculateTimeRemaining,
   generateIcsFile,
   getGoogleCalendarUrl,
-  getOutlookCalendarUrl
+  getOutlookCalendarUrl,
+  getSafeExternalUrl,
+  isEventRescheduled
 } from '../../utils/calendarUtils';
 
 interface EventDetailsModalProps {
@@ -80,7 +82,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
   );
 
   const isRegistered = !!userRegistration;
+  const isRescheduled = isEventRescheduled(event);
+  const safeRegUrl = getSafeExternalUrl(event.registrationLink || event.externalRegistrationUrl);
+  const hasExternalRegistration = Boolean(safeRegUrl);
   const userReminder = reminders.find((r) => r.eventId === event.id && r.studentId === currentUser.id);
+  const isFull =
+    event.isFull !== undefined
+      ? Boolean(event.isFull)
+      : typeof event.currentRegistrations === 'number' && typeof event.maxParticipants === 'number' && event.maxParticipants > 0
+      ? event.currentRegistrations >= event.maxParticipants
+      : false;
+  const canViewCount = currentUser.role !== 'student' && typeof event.currentRegistrations === 'number';
 
   const isOrganizer =
     currentUser.role === 'college_admin' ||
@@ -193,6 +205,19 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
               </div>
               <p className="text-slate-700 dark:text-slate-300">
                 Admin Feedback: <span className="font-semibold italic text-orange-800 dark:text-orange-200">"{event.changeComments?.[0] || 'Please review proposal details.'}"</span>
+              </p>
+            </div>
+          )}
+
+          {/* Rescheduled Notice Banner if genuinely rescheduled */}
+          {isRescheduled && (
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-1.5 text-xs animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-sm text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Notice: Event Schedule Updated (Rescheduled)</span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-300">
+                This event has been rescheduled. Please note the current date ({formatFullDate(event.date)}) and timings ({formatDisplayTime(event.startTime)} – {formatDisplayTime(event.endTime)}) at {event.venueName}.
               </p>
             </div>
           )}
@@ -394,16 +419,26 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             </div>
           )}
           {/* Registration Box / QR Pass section */}
-          {event.registrationRequired && (
+          {(event.registrationRequired || hasExternalRegistration) && (
             <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-50 via-slate-50 to-blue-50 dark:from-indigo-950/40 dark:via-slate-900 dark:to-blue-950/30 border border-indigo-200/80 dark:border-indigo-900/60 shadow-md space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
                     Registration Desk
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {event.currentRegistrations} / {event.maxParticipants} Seats Occupied
-                  </p>
+                  {canViewCount ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {event.currentRegistrations} / {event.maxParticipants} Seats Occupied
+                    </p>
+                  ) : isFull ? (
+                    <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                      Registration Full (Capacity Reached)
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Registration Open
+                    </p>
+                  )}
                 </div>
 
                 {isRegistered && (
@@ -506,19 +541,19 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     </button>
                   </div>
                 </div>
-              ) : event.registrationType === 'external' || event.registrationType === 'link' ? (
+              ) : hasExternalRegistration ? (
                 /* External Link Registration */
                 <div className="space-y-3">
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    This event requires registration on an external platform or form. Click below to open the official registration link.
+                    This event requires registration on an official external platform or form. Click below to open the official registration link and secure your spot.
                   </p>
                   <a
-                    href={event.registrationLink || '#'}
+                    href={safeRegUrl!}
                     target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md transition-all"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer"
                   >
-                    <span>Open Registration Link</span>
+                    <span>Register Now</span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>
@@ -578,11 +613,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
                   <button
                     onClick={handleRegister}
-                    disabled={isRegistering || event.currentRegistrations >= event.maxParticipants}
+                    disabled={isRegistering || isFull}
                     className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm 1-Click Campus Registration</span>
+                    <span>{isFull ? 'Registration Full' : 'Confirm 1-Click Campus Registration'}</span>
                   </button>
                 </div>
               )}

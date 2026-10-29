@@ -25,8 +25,10 @@ import { formatDisplayDate, formatDisplayTime } from '../../utils/calendarUtils'
 import {
   fetchEventRegistrationsApi,
   downloadEventRegistrationsCsv,
-  downloadEventRegistrationsPdf
+  downloadEventRegistrationsPdf,
+  getToken
 } from '../../utils/api';
+import { matchesClubIdentity } from '../../utils/filterUtils';
 
 export const RegistrationsView: React.FC = () => {
   const {
@@ -38,8 +40,25 @@ export const RegistrationsView: React.FC = () => {
     broadcastEmails
   } = useApp();
 
-  const myClub = clubs.find((c) => c.id === currentUser.clubId) || clubs[0];
-  const clubEvents = events.filter((e) => e.clubId === myClub.id && e.status !== 'cancelled');
+  const myClub =
+    clubs.find(
+      (c) =>
+        c.id === currentUser.clubId ||
+        (c as any)._id === currentUser.clubId ||
+        (currentUser.clubName &&
+          (c.name.toLowerCase() === currentUser.clubName.toLowerCase() ||
+            (c.shortName && c.shortName.toLowerCase() === currentUser.clubName.toLowerCase())))
+    ) || clubs[0];
+
+  const clubEvents = events.filter((e) => {
+    return (
+      (matchesClubIdentity(e, myClub?.id || '') ||
+        (myClub?.name ? matchesClubIdentity(e, myClub.name) : false) ||
+        (currentUser.clubId ? matchesClubIdentity(e, currentUser.clubId) : false) ||
+        (currentUser.clubName ? matchesClubIdentity(e, currentUser.clubName) : false)) &&
+      e.status !== 'cancelled'
+    );
+  });
 
   // Default to selecting the first event or 'Hello' hackathon if present
   const defaultSelected =
@@ -60,7 +79,7 @@ export const RegistrationsView: React.FC = () => {
 
   // Currently selected event
   const activeEvent =
-    events.find((e) => e.id === selectedEventId) || defaultSelected;
+    clubEvents.find((e) => e.id === selectedEventId) || defaultSelected;
 
   // Backend registration state for the active event
   const [backendRegistrations, setBackendRegistrations] = useState<Registration[]>([]);
@@ -74,10 +93,11 @@ export const RegistrationsView: React.FC = () => {
       return;
     }
 
-    const token = localStorage.getItem('token') || localStorage.getItem('campusconnect_token');
+    const token = getToken();
     if (token && /^[0-9a-fA-F]{24}$/.test(activeEvent.id)) {
       setIsLoadingRegistrations(true);
       setRegistrationsError(null);
+      setBackendRegistrations([]);
       fetchEventRegistrationsApi(activeEvent.id)
         .then((data) => {
           setBackendRegistrations(data);
@@ -335,8 +355,17 @@ export const RegistrationsView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {clubEvents.map((evt) => {
             const isSelected = evt.id === activeEvent?.id;
-            const regCount = registrations.filter((r) => r.eventId === evt.id).length;
-            const percent = Math.min(Math.round((regCount / (evt.maxParticipants || 100)) * 100), 100);
+            const regCount =
+              isSelected && !isLoadingRegistrations && !registrationsError
+                ? backendRegistrations.length
+                : (typeof evt.currentRegistrations === 'number'
+                    ? evt.currentRegistrations
+                    : (registrations.filter((r) => r.eventId === evt.id).length || 0));
+            const maxParticipants = evt.maxParticipants || 100;
+            const percent =
+              maxParticipants > 0
+                ? Math.min(Math.round((regCount / maxParticipants) * 100), 100)
+                : 0;
 
             return (
               <div
@@ -412,7 +441,9 @@ export const RegistrationsView: React.FC = () => {
                   Active Card: {activeEvent.title}
                 </span>
                 <span className="text-xs text-slate-500">
-                  {eventRegistrations.length} Total Attendees
+                  {isLoadingRegistrations
+                    ? 'Loading attendees...'
+                    : `${eventRegistrations.length} Total Attendees`}
                 </span>
               </div>
               <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">

@@ -17,7 +17,8 @@ import {
   Download,
   CalendarDays,
   CalendarRange,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import {
   getMonthMatrix,
@@ -29,7 +30,9 @@ import {
   formatWeekRange,
   formatDayHeader,
   generateIcsFile,
-  isEventPast
+  isEventPast,
+  getSafeExternalUrl,
+  isEventRescheduled
 } from '../../utils/calendarUtils';
 import { StatusBadge } from '../common/StatusBadge';
 import { matchesClubIdentity, matchesVenueIdentity } from '../../utils/filterUtils';
@@ -243,46 +246,72 @@ export const CentralCalendar: React.FC = () => {
     setSelectedVenueFilter('all');
   };
 
-  // Event badge color helper
+  // Event badge color helper - modern academic aesthetic
   const getEventTypeColor = (e: CampusEvent) => {
     const cat = (e.category || '').toLowerCase();
     const type = (e.eventType || '').toLowerCase();
 
-    if (cat === 'academic' || ['internal exam', 'end sem exam', 'examination'].includes(type)) {
-      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30';
+    if (cat === 'academic' || ['internal exam', 'end sem exam', 'examination', 'holiday'].includes(type)) {
+      return 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 border-rose-200/90 dark:border-rose-800/60 hover:border-rose-400';
     }
     if (['hackathon', 'ideathon', 'competition'].includes(type)) {
-      return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
+      return 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200 border-indigo-200/90 dark:border-indigo-800/60 hover:border-indigo-400';
     }
     if (['workshop', 'sig session', 'technical event'].includes(type)) {
-      return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30';
+      return 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 border-emerald-200/90 dark:border-emerald-800/60 hover:border-emerald-400';
     }
-    return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30';
+    return 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200 border-blue-200/90 dark:border-blue-800/60 hover:border-blue-400';
+  };
+
+  const getEventTypeDot = (e: CampusEvent) => {
+    const cat = (e.category || '').toLowerCase();
+    const type = (e.eventType || '').toLowerCase();
+
+    if (cat === 'academic' || ['internal exam', 'end sem exam', 'examination', 'holiday'].includes(type)) {
+      return 'bg-rose-500';
+    }
+    if (['hackathon', 'ideathon', 'competition'].includes(type)) {
+      return 'bg-indigo-600';
+    }
+    if (['workshop', 'sig session', 'technical event'].includes(type)) {
+      return 'bg-emerald-500';
+    }
+    return 'bg-blue-600';
   };
 
   return (
     <div className="space-y-6">
       
       {/* Top Controls Header */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
         
-        {/* Row 1: Date Navigation, View Mode Selector, and Today Button */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Row 1: Header Title, Month Navigation, and Segmented View Switcher */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
-          {/* Navigation and Current Date Display */}
-          <div className="flex items-center justify-between sm:justify-start gap-3 w-full md:w-auto">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 min-w-0 sm:min-w-[200px]">
-              {viewMode === 'day'
-                ? formatDayHeader(currentDate)
-                : viewMode === 'week'
-                ? formatWeekRange(currentDate)
-                : formatMonthYear(currentDate)}
-            </h2>
+          {/* Navigation & Prominent Date Display */}
+          <div className="flex items-center gap-3.5 flex-wrap sm:flex-nowrap">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/15 dark:from-blue-500/20 dark:to-indigo-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200/60 dark:border-blue-800/60 shadow-xs shrink-0">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
+                Academic & Campus Calendar
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                {viewMode === 'day'
+                  ? formatDayHeader(currentDate)
+                  : viewMode === 'week'
+                  ? formatWeekRange(currentDate)
+                  : formatMonthYear(currentDate)}
+              </h2>
+            </div>
+
+            {/* Navigation Buttons: < Today > */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shrink-0 ml-auto sm:ml-2">
               <button
                 onClick={prevDate}
-                className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-blue-600 transition-all cursor-pointer shadow-2xs"
                 title={
                   viewMode === 'day'
                     ? 'Previous Day'
@@ -295,13 +324,13 @@ export const CentralCalendar: React.FC = () => {
               </button>
               <button
                 onClick={goToToday}
-                className="px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 hover:text-blue-600 rounded-lg transition-all cursor-pointer shadow-2xs"
               >
                 Today
               </button>
               <button
                 onClick={nextDate}
-                className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-blue-600 transition-all cursor-pointer shadow-2xs"
                 title={
                   viewMode === 'day'
                     ? 'Next Day'
@@ -315,17 +344,17 @@ export const CentralCalendar: React.FC = () => {
             </div>
           </div>
 
-          {/* View Mode Selector Tabs: Daily, Weekly, Monthly */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold w-full sm:w-auto self-start sm:self-center">
+          {/* View Mode Segmented Controls */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-xs font-bold w-full sm:w-auto self-start lg:self-center">
             <button
               id="calendar-view-day-btn"
               onClick={() => {
                 setViewMode('day');
                 setSelectedDayDate(formatDateToYYYYMMDD(currentDate));
               }}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
                 viewMode === 'day'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -336,9 +365,9 @@ export const CentralCalendar: React.FC = () => {
             <button
               id="calendar-view-week-btn"
               onClick={() => setViewMode('week')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
                 viewMode === 'week'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -349,9 +378,9 @@ export const CentralCalendar: React.FC = () => {
             <button
               id="calendar-view-month-btn"
               onClick={() => setViewMode('month')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
                 viewMode === 'month'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -367,14 +396,14 @@ export const CentralCalendar: React.FC = () => {
           
           {/* Keyword Search Input */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="calendar-search-input"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search calendar events..."
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              placeholder="Search events, clubs, venues..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
             />
           </div>
 
@@ -384,7 +413,7 @@ export const CentralCalendar: React.FC = () => {
               id="calendar-category-select"
               value={selectedCategoryFilter}
               onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-1.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 text-xs font-semibold py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
             >
               <option value="all">All Categories</option>
               <option value="club">Clubs Only</option>
@@ -400,7 +429,7 @@ export const CentralCalendar: React.FC = () => {
               id="calendar-club-select"
               value={selectedClubFilter}
               onChange={(e) => setSelectedClubFilter(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-1.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 text-xs font-semibold py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
             >
               <option value="all">All Clubs ({clubs.length})</option>
               {clubs.map((c) => (
@@ -417,7 +446,7 @@ export const CentralCalendar: React.FC = () => {
               id="calendar-venue-select"
               value={selectedVenueFilter}
               onChange={(e) => setSelectedVenueFilter(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-1.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 text-xs font-semibold py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all cursor-pointer"
             >
               <option value="all">All Venues ({venues.length})</option>
               {venues.map((v) => (
@@ -431,38 +460,38 @@ export const CentralCalendar: React.FC = () => {
         </div>
 
         {/* Legend & Clear Filter Reset Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3.5 flex-wrap">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Key:</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-600" />
+        <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="font-bold text-slate-700 dark:text-slate-300">Categories:</span>
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-2xs" />
               General
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-600" />
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shadow-2xs" />
               Hackathons
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-cyan-500" />
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" />
               Workshops
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              Exams
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-2xs" />
+              Academic & Exams
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 text-xs border border-slate-200/60 dark:border-slate-700/60">
               {visibleEvents.length} event{visibleEvents.length !== 1 ? 's' : ''} shown
             </span>
 
             {hasActiveFilters && (
               <button
                 onClick={resetAllFilters}
-                className="px-2 py-0.5 rounded text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 inline-flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Filters</span>
               </button>
             )}
@@ -478,43 +507,45 @@ export const CentralCalendar: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 Daily Timeline
               </span>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 {formatDayHeader(currentDate)}
               </h3>
             </div>
-            <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200 dark:border-blue-900">
+            <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200 dark:border-blue-900 shadow-2xs">
               {selectedDayEvents.length} Event{selectedDayEvents.length !== 1 ? 's' : ''} Today
             </span>
           </div>
 
           {selectedDayEvents.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs">
-              <CalendarIcon className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto" />
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                <CalendarIcon className="w-6 h-6" />
+              </div>
               <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
                 No events scheduled on {formatDayHeader(currentDate)}
               </h4>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
                 There are no approved events matching your active filters on this date.
               </p>
-              <div className="flex items-center justify-center gap-2 pt-1">
+              <div className="flex items-center justify-center gap-2 pt-2">
                 <button
                   onClick={prevDate}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   &larr; Previous Day
                 </button>
                 <button
                   onClick={nextDate}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   Next Day &rarr;
                 </button>
                 <button
                   onClick={() => setViewMode('month')}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
                 >
                   Monthly Grid
                 </button>
@@ -522,77 +553,105 @@ export const CentralCalendar: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {selectedDayEvents.map((evt) => (
-                <div
-                  key={evt.id}
-                  onClick={() => setSelectedEventForModal(evt)}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
-                        {evt.clubName || evt.organizerName || 'Campus Event'}
-                      </span>
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                        {evt.eventType}
-                      </span>
-                      <StatusBadge status={evt.status} size="sm" />
-                    </div>
+              {selectedDayEvents.map((evt) => {
+                const isRescheduled = isEventRescheduled(evt);
+                const safeRegUrl = getSafeExternalUrl(evt.externalRegistrationUrl || evt.registrationLink);
+                const hasExternalRegistration = Boolean(safeRegUrl);
 
-                    <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                      {evt.title}
-                    </h4>
-
-                    {evt.shortDescription && (
-                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                        {evt.shortDescription}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap pt-1">
-                      <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-                        <Clock className="w-3.5 h-3.5 text-blue-500" />
-                        <span>
-                          {formatDisplayTime(evt.startTime)} – {formatDisplayTime(evt.endTime)}
+                return (
+                  <div
+                    key={evt.id}
+                    onClick={() => setSelectedEventForModal(evt)}
+                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group"
+                  >
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-900">
+                          {evt.clubName || evt.organizerName || 'Campus Event'}
                         </span>
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                        <span>{evt.venueName}</span>
-                      </span>
-                      {evt.maxParticipants && (
-                        <span>
-                          Capacity: {evt.currentRegistrations || 0}/{evt.maxParticipants}
+                        <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700">
+                          {evt.eventType}
                         </span>
+                        <StatusBadge status={evt.status} size="sm" />
+                        {isRescheduled && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                            Rescheduled
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {evt.title}
+                      </h4>
+
+                      {evt.shortDescription && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {evt.shortDescription}
+                        </p>
                       )}
+
+                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap pt-1">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+                          <Clock className="w-3.5 h-3.5 text-blue-500" />
+                          <span>
+                            {formatDisplayTime(evt.startTime)} – {formatDisplayTime(evt.endTime)}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                          <span>{evt.venueName}</span>
+                        </span>
+                        {currentUser.role !== 'student' && typeof evt.currentRegistrations === 'number' && evt.maxParticipants ? (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                            Capacity: {evt.currentRegistrations}/{evt.maxParticipants}
+                          </span>
+                        ) : evt.isFull ? (
+                          <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 text-[11px] font-bold">
+                            Housefull
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
+                      {hasExternalRegistration && (
+                        <a
+                          href={safeRegUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Register Now</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateIcsFile(evt);
+                        }}
+                        title="Download .ICS for Apple/Google Calendar"
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>.ICS</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEventForModal(evt)}
+                        className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Details & Pass</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        generateIcsFile(evt);
-                      }}
-                      title="Download .ICS for Apple/Google Calendar"
-                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>.ICS</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEventForModal(evt)}
-                      className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Details & Pass</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -605,14 +664,14 @@ export const CentralCalendar: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 Weekly Grid
               </span>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 {formatWeekRange(currentDate)}
               </h3>
             </div>
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
               Sunday through Saturday
             </span>
           </div>
@@ -630,19 +689,19 @@ export const CentralCalendar: React.FC = () => {
                     setSelectedDayDate(day.dateStr);
                     setCurrentDate(day.date);
                   }}
-                  className={`p-3 rounded-2xl border transition-all flex flex-col justify-between min-h-[220px] ${
+                  className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between min-h-[240px] cursor-pointer group ${
                     day.isToday
-                      ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-400 dark:border-blue-700 ring-1 ring-blue-300 dark:ring-blue-800'
+                      ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-400 dark:border-blue-700 ring-2 ring-blue-300 dark:ring-blue-800 shadow-xs'
                       : isSelected
-                      ? 'bg-slate-50 dark:bg-slate-800/80 border-blue-500 ring-1 ring-blue-500/50'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                      ? 'bg-indigo-50/40 dark:bg-indigo-950/30 border-indigo-500 ring-2 ring-indigo-500/50 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-blue-300 hover:shadow-2xs'
                   }`}
                 >
                   {/* Day Header */}
                   <div>
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
                       <div>
-                        <span className="text-[11px] font-bold uppercase text-slate-400 block">
+                        <span className="text-[11px] font-bold uppercase text-slate-400 block tracking-wider">
                           {day.dayName}
                         </span>
                         <span
@@ -655,16 +714,16 @@ export const CentralCalendar: React.FC = () => {
                       </div>
 
                       {dayEvts.length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-extrabold text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-black text-[10px]">
                           {dayEvts.length}
                         </span>
                       )}
                     </div>
 
                     {/* Events List for Day */}
-                    <div className="mt-2.5 space-y-2">
+                    <div className="mt-3 space-y-2">
                       {dayEvts.length === 0 ? (
-                        <p className="text-[11px] text-slate-400 italic pt-4 text-center">
+                        <p className="text-[11px] text-slate-400 italic pt-6 text-center">
                           No events
                         </p>
                       ) : (
@@ -706,7 +765,7 @@ export const CentralCalendar: React.FC = () => {
                       setSelectedDayDate(day.dateStr);
                       setViewMode('day');
                     }}
-                    className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline text-center w-full block cursor-pointer"
+                    className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline text-center w-full block cursor-pointer"
                   >
                     View Day &rarr;
                   </button>
@@ -724,9 +783,9 @@ export const CentralCalendar: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Month Matrix (3 cols) */}
-          <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden p-4 sm:p-5">
+          <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden p-4 sm:p-5">
             {/* Day of Week Headers */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2.5 text-center text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
                 <div key={i} className="py-1">
                   {d}
@@ -735,7 +794,7 @@ export const CentralCalendar: React.FC = () => {
             </div>
 
             {/* Day Cells Matrix */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {monthMatrix.map((week, wIdx) =>
                 week.map((cell, cIdx) => {
                   const dayEvents = getEventsForDay(cell.dateStr);
@@ -745,53 +804,56 @@ export const CentralCalendar: React.FC = () => {
                     <div
                       key={`${wIdx}-${cIdx}`}
                       onClick={() => setSelectedDayDate(cell.dateStr)}
-                      className={`min-h-[64px] sm:min-h-[105px] p-1 sm:p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`min-h-[72px] sm:min-h-[110px] p-1.5 sm:p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
                         isSelected
-                          ? 'ring-2 ring-blue-600 bg-blue-50/40 dark:bg-blue-950/30 border-blue-400'
+                          ? 'ring-2 ring-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30 border-indigo-500 shadow-xs'
+                          : cell.isToday
+                          ? 'ring-2 ring-blue-500/80 bg-blue-50/50 dark:bg-blue-950/20 border-blue-400 dark:border-blue-700'
                           : cell.isCurrentMonth
-                          ? 'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 hover:border-blue-300'
-                          : 'bg-transparent border-transparent opacity-30'
+                          ? 'bg-white dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700 hover:shadow-2xs'
+                          : 'bg-slate-50/40 dark:bg-slate-900/40 border-dashed border-slate-200/40 dark:border-slate-800/40 opacity-40'
                       }`}
                     >
                       {/* Date Number Header */}
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center ${
+                          className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 ${
                             cell.isToday
-                              ? 'bg-blue-600 text-white shadow-xs'
+                              ? 'bg-blue-600 text-white shadow-xs font-black'
                               : isSelected
-                              ? 'text-blue-600 dark:text-blue-400 font-extrabold'
+                              ? 'bg-indigo-600 text-white font-black shadow-xs'
                               : 'text-slate-700 dark:text-slate-300'
                           }`}
                         >
                           {cell.dayNumber}
                         </span>
 
+                        {cell.isToday && (
+                          <span className="hidden sm:inline-block text-[9px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                            Today
+                          </span>
+                        )}
+
                         {dayEvents.length > 0 && (
-                          <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-700 px-1 sm:px-1.5 py-0.2 rounded-full">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-600/60">
                             {dayEvents.length}
                           </span>
                         )}
                       </div>
 
                       {/* Event Badges List */}
-                      <div className="space-y-1 my-0.5 sm:my-1 overflow-hidden">
+                      <div className="space-y-1 my-1 overflow-hidden">
                         {/* Mobile Compact Dots */}
                         <div className="flex sm:hidden items-center justify-center gap-1 flex-wrap">
                           {dayEvents.slice(0, 3).map((evt) => (
                             <span
                               key={evt.id}
-                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                (evt.category || '').toLowerCase() === 'academic'
-                                  ? 'bg-rose-500'
-                                  : ['Hackathon', 'Ideathon'].includes(evt.eventType)
-                                  ? 'bg-indigo-600'
-                                  : 'bg-blue-500'
-                              }`}
+                              title={evt.title}
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${getEventTypeDot(evt)}`}
                             />
                           ))}
                           {dayEvents.length > 3 && (
-                            <span className="text-[8px] font-bold text-blue-600 dark:text-blue-400">
+                            <span className="text-[8px] font-black text-blue-600 dark:text-blue-400">
                               +{dayEvents.length - 3}
                             </span>
                           )}
@@ -806,19 +868,27 @@ export const CentralCalendar: React.FC = () => {
                                 e.stopPropagation();
                                 setSelectedEventForModal(evt);
                               }}
-                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded border truncate leading-tight transition-transform hover:opacity-80 ${getEventTypeColor(
+                              className={`text-[10px] font-semibold px-2 py-1 rounded-lg border truncate leading-tight transition-all hover:scale-[1.02] shadow-2xs flex items-center gap-1.5 ${getEventTypeColor(
                                 evt
                               )}`}
                               title={`${evt.title} (${evt.startTime} at ${evt.venueName})`}
                             >
-                              {evt.title}
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${getEventTypeDot(evt)}`} />
+                              <span className="truncate">{evt.title}</span>
                             </div>
                           ))}
 
                           {dayEvents.length > 2 && (
-                            <div className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDayDate(cell.dateStr);
+                              }}
+                              className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline w-full text-center py-0.5 cursor-pointer block"
+                            >
                               +{dayEvents.length - 2} more
-                            </div>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -832,79 +902,136 @@ export const CentralCalendar: React.FC = () => {
           </div>
 
           {/* Selected Day Event Drawer (1 col) */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 sm:p-5 flex flex-col justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs p-5 flex flex-col justify-between">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                     Day Schedule
                   </span>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 tracking-tight">
                     {formatDisplayDate(selectedDayDate)}
                   </h3>
                 </div>
-                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-900">
-                  {selectedDayEvents.length} Events
+                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900">
+                  {selectedDayEvents.length} Event{selectedDayEvents.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {/* Events List for Selected Day */}
               {selectedDayEvents.length === 0 ? (
-                <div className="py-12 text-center space-y-2">
-                  <CalendarIcon className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto" />
-                  <p className="text-xs text-slate-400">No events scheduled for this day.</p>
+                <div className="py-12 text-center space-y-2.5">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                    <CalendarIcon className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    No events scheduled
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Select a date with events or click another day to explore activities.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-                  {selectedDayEvents.map((evt) => (
-                    <div
-                      key={evt.id}
-                      onClick={() => setSelectedEventForModal(evt)}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 transition-all cursor-pointer space-y-1.5 group shadow-2xs"
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                          {evt.clubName || evt.organizerName}
-                        </span>
-                        <StatusBadge status={evt.status} size="sm" />
-                      </div>
+                <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                  {selectedDayEvents.map((evt) => {
+                    const isRescheduled = isEventRescheduled(evt);
+                    const safeRegUrl = getSafeExternalUrl(evt.externalRegistrationUrl || evt.registrationLink);
+                    const hasExternalRegistration = Boolean(safeRegUrl);
 
-                      <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                        {evt.title}
-                      </h4>
-
-                      <div className="space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          <span>
-                            {formatDisplayTime(evt.startTime)} – {formatDisplayTime(evt.endTime)}
+                    return (
+                      <div
+                        key={evt.id}
+                        onClick={() => setSelectedEventForModal(evt)}
+                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer space-y-2 group shadow-2xs hover:shadow-xs"
+                      >
+                        <div className="flex items-center justify-between gap-1 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200/60 dark:border-blue-900">
+                            {evt.clubName || evt.organizerName}
                           </span>
+                          <div className="flex items-center gap-1">
+                            <StatusBadge status={evt.status} size="sm" />
+                            {isRescheduled && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-900">
+                                Rescheduled
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          <span className="truncate">{evt.venueName}</span>
+
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                          {evt.title}
+                        </h4>
+
+                        <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                            <Clock className="w-3.5 h-3.5 text-blue-500" />
+                            <span>
+                              {formatDisplayTime(evt.startTime)} – {formatDisplayTime(evt.endTime)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                            <span className="truncate">{evt.venueName}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons inside Drawer */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 flex-wrap">
+                          {hasExternalRegistration && (
+                            <a
+                              href={safeRegUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition-colors"
+                            >
+                              <span>Register</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedEventForModal(evt)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-2xs transition-colors"
+                          >
+                            <span>Details</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              generateIcsFile(evt);
+                            }}
+                            title="Download .ICS"
+                            className="p-1 rounded-lg bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors ml-auto"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
               <button
                 onClick={() => {
                   const [y, m, d] = selectedDayDate.split('-').map(Number);
                   setCurrentDate(new Date(y, (m || 1) - 1, d || 1));
                   setViewMode('day');
                 }}
-                className="text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                className="text-blue-600 dark:text-blue-400 font-extrabold hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
                 <span>Open Full Day View</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
-              <span className="text-slate-400 text-[10px]">Click any event for pass</span>
+              <span className="text-slate-400 text-[11px] font-medium">Click event for pass</span>
             </div>
           </div>
 

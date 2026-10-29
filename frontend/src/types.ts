@@ -211,6 +211,7 @@ export interface CampusEvent {
   registrationDeadline?: string | null;
   maxParticipants?: number | null;
   currentRegistrations?: number;
+  isFull?: boolean;
   meetingLink?: string;
 
   // Additional info

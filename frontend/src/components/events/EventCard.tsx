@@ -15,7 +15,13 @@ import {
   Share2,
   QrCode
 } from 'lucide-react';
-import { formatDisplayDate, formatDisplayTime, calculateTimeRemaining } from '../../utils/calendarUtils';
+import {
+  formatDisplayDate,
+  formatDisplayTime,
+  calculateTimeRemaining,
+  getSafeExternalUrl,
+  isEventRescheduled
+} from '../../utils/calendarUtils';
 
 interface EventCardProps {
   event: CampusEvent;
@@ -37,11 +43,22 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
 
   const club = clubs.find((c) => c.id === event.clubId);
   const timeRemaining = calculateTimeRemaining(event.date, event.startTime);
-  const isHappeningSoon = !timeRemaining.isPast && timeRemaining.totalHours <= 48;
-  const isFull = event.currentRegistrations >= event.maxParticipants;
-  const fillPercentage = Math.min(100, Math.round((event.currentRegistrations / (event.maxParticipants || 1)) * 100));
+  const isFull =
+    event.isFull !== undefined
+      ? Boolean(event.isFull)
+      : typeof event.currentRegistrations === 'number' && typeof event.maxParticipants === 'number' && event.maxParticipants > 0
+      ? event.currentRegistrations >= event.maxParticipants
+      : false;
+  const canViewCount = currentUser.role !== 'student' && typeof event.currentRegistrations === 'number';
+  const fillPercentage =
+    canViewCount && event.maxParticipants
+      ? Math.min(100, Math.round((event.currentRegistrations! / event.maxParticipants) * 100))
+      : 0;
 
   const isAcademic = event.category === 'academic';
+  const isRescheduled = isEventRescheduled(event);
+  const safeRegUrl = getSafeExternalUrl(event.registrationLink || event.externalRegistrationUrl);
+  const hasExternalRegistration = Boolean(safeRegUrl);
 
   return (
     <div
@@ -88,8 +105,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
           </div>
         </div>
 
-        {/* Rescheduled warning pill */}
-        {event.rescheduledHistory && (
+        {/* Rescheduled warning pill - Only displayed if event was genuinely rescheduled */}
+        {isRescheduled && (
           <div className="absolute bottom-3 left-3 right-3 bg-amber-500 text-slate-950 text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5 shadow-sm">
             <AlertTriangle className="w-3 h-3 shrink-0" />
             <span className="truncate">Rescheduled: {formatDisplayDate(event.date)}</span>
@@ -136,8 +153,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
           </p>
         </div>
 
-        {/* Capacity / Registration fill meter */}
-        {event.registrationRequired && (
+        {/* Capacity / Registration fill meter - visible only to authorized club leads / admins, hidden from students */}
+        {event.registrationRequired && canViewCount && (
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>
@@ -174,29 +191,43 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Pass Ready</span>
             </div>
-          ) : event.registrationRequired ? (
+          ) : hasExternalRegistration ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if ((event.registrationType === 'external' || event.registrationType === 'link') && event.registrationLink) {
-                  window.open(event.registrationLink, '_blank');
-                } else {
-                  setSelectedEventForModal(event);
-                }
+                window.open(safeRegUrl!, '_blank', 'noopener,noreferrer');
               }}
               disabled={isFull}
-              className={`py-2 px-4 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              title={isFull ? 'Capacity reached' : 'Open external registration link in a new tab'}
+              className={`py-2 px-4 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
                 isFull
                   ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
               }`}
             >
-              {event.registrationType === 'external' || event.registrationType === 'link' ? (
+              {isFull ? (
+                <span>Housefull</span>
+              ) : (
                 <>
-                  <span>Register</span>
+                  <span>Register Now</span>
                   <ExternalLink className="w-3 h-3" />
                 </>
-              ) : event.registrationType === 'qr' ? (
+              )}
+            </button>
+          ) : event.registrationRequired ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedEventForModal(event);
+              }}
+              disabled={isFull}
+              className={`py-2 px-4 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                isFull
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+              }`}
+            >
+              {event.registrationType === 'qr' ? (
                 <>
                   <span>Scan QR</span>
                   <QrCode className="w-3 h-3" />
@@ -213,7 +244,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
                 e.stopPropagation();
                 setSelectedEventForModal(event);
               }}
-              className="py-2 px-4 rounded-lg bg-white border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="py-2 px-4 rounded-lg bg-white border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               View Details
             </button>

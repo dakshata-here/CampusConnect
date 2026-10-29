@@ -172,6 +172,10 @@ export const PresidentDashboard: React.FC = () => {
 
   // Club registration stats
   const clubEventIds = clubEvents.map((e) => e.id);
+  const totalClubRegistrations = clubEvents.reduce(
+    (acc, e) => acc + (Number(e.currentRegistrations) || 0),
+    0
+  );
   const clubRegistrations = registrations.filter((r) => clubEventIds.includes(r.eventId));
   const totalAttended = clubRegistrations.filter((r) => r.attendanceStatus === 'attended').length;
   const clubCertificates = certificates.filter((c) => c.clubName === myClub.name);
@@ -287,7 +291,7 @@ export const PresidentDashboard: React.FC = () => {
             <Users className="w-4 h-4 text-blue-500" />
           </div>
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-            {clubRegistrations.length}
+            {Math.max(clubRegistrations.length, totalClubRegistrations)}
           </p>
           <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold block mt-1">
             Attendee Registry & Mailer &rarr;
@@ -585,7 +589,7 @@ export const PresidentDashboard: React.FC = () => {
                       <span>{evt.venueName}</span>
                       <span>•</span>
                       <span className="font-semibold text-blue-600 dark:text-blue-400">
-                        {evt.currentRegistrations} / {evt.maxParticipants} Registered
+                        {evt.currentRegistrations ?? 0} / {evt.maxParticipants} Registered
                       </span>
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import { Club, ClubCategory, ClubStatus } from '../src/models/Club.js';
 import { ClubMembership, ClubMembershipRole } from '../src/models/ClubMembership.js';
 import { Venue, VenueOperationalStatus } from '../src/models/Venue.js';
 import { Event, EventCategory, EventStatus, RegistrationMethod } from '../src/models/Event.js';
+import { EventRegistration, RegistrationAttendanceStatus } from '../src/models/EventRegistration.js';
 import { generateToken } from '../src/utils/jwt.js';
 
 let mongod: MongoMemoryServer | null = null;
@@ -49,6 +50,7 @@ async function startTestEnvironment() {
   await ClubMembership.deleteMany({});
   await Venue.deleteMany({});
   await Event.deleteMany({});
+  await EventRegistration.deleteMany({});
 
   const app = createApp();
   await new Promise<void>((resolve) => {
@@ -661,6 +663,196 @@ async function runTests() {
       pres1Token
     );
     assert(res23PresAcademic.status === 403, '23. President cannot create ACADEMIC events (403)');
+
+    // 24. Role-based event registration count restriction checks
+    // 24a. Student receives NO registration count in GET /api/events
+    const res24Events = await apiRequest('GET', '/api/events', undefined, studentToken);
+    assert(res24Events.status === 200, '24a. GET /api/events returns 200');
+    assert(
+      res24Events.body.events.every((e: any) => e.currentRegistrations === undefined),
+      '24b. Student receives NO registration count data across events in GET /api/events'
+    );
+
+    // 24c. Student receives NO registration count in GET /api/events/:id
+    const res24StudentDetailBefore = await apiRequest('GET', `/api/events/${club1EventId}`, undefined, studentToken);
+    assert(res24StudentDetailBefore.status === 200, '24c. GET /api/events/:id returns 200 for student');
+    assert(
+      res24StudentDetailBefore.body.event.currentRegistrations === undefined,
+      '24d. Student receives NO registration count in GET /api/events/:id'
+    );
+
+    // Set club1EventId status to APPROVED so students can register
+    await Event.findByIdAndUpdate(club1EventId, { status: EventStatus.APPROVED });
+
+    // Register student 1 for club1EventId via official API
+    const res24RegStudent1 = await apiRequest(
+      'POST',
+      `/api/registrations/events/${club1EventId}`,
+      { teamName: 'Coders' },
+      studentToken
+    );
+    assert(res24RegStudent1.status === 201, '24e. Student can successfully register for event (201)');
+
+    // Verify student can see their own registration status via /api/registrations/my
+    const res24MyRegs = await apiRequest('GET', '/api/registrations/my', undefined, studentToken);
+    assert(res24MyRegs.status === 200, '24f. Student can view their own registration status (200)');
+    assert(
+      res24MyRegs.body.registrations.some((r: any) => (r.eventId?.id || r.eventId?._id || r.eventId) === club1EventId),
+      '24g. Student own registration is present in /api/registrations/my'
+    );
+
+    // Register student 2 directly
+    const studentUser2 = await User.create({
+      name: 'Student Two',
+      email: 'student2.events@campusconnect.edu',
+      password: 'Password123!',
+      role: UserRole.STUDENT,
+      department: 'Computer Science',
+      collegeUid: 'STU002'
+    });
+    await EventRegistration.create({
+      eventId: club1EventId,
+      studentId: studentUser2._id,
+      studentEnrollment: 'STU002',
+      attendanceStatus: RegistrationAttendanceStatus.REGISTERED
+    });
+
+    // 24h. Student still receives no count after registrations
+    const res24StudentDetailAfter = await apiRequest('GET', `/api/events/${club1EventId}`, undefined, studentToken);
+    assert(
+      res24StudentDetailAfter.body.event.currentRegistrations === undefined,
+      '24h. Student still receives no registration count after registrations added'
+    );
+
+    // 24i. Club 1 Lead (pres1) can see count for own club's event in GET /api/events
+    const res24Pres1Events = await apiRequest('GET', '/api/events', undefined, pres1Token);
+    const pres1Club1Evt = res24Pres1Events.body.events.find((e: any) => (e._id || e.id) === club1EventId);
+    assert(pres1Club1Evt && pres1Club1Evt.currentRegistrations === 2, '24i. Club Lead sees count (2) for own club event in GET /api/events');
+
+    // 24j. Club 1 Lead CANNOT see count for another club's event (Club 2) in GET /api/events
+    const pres1Club2Evt = res24Pres1Events.body.events.find((e: any) => (e._id || e.id) === club2EventId);
+    assert(pres1Club2Evt && pres1Club2Evt.currentRegistrations === undefined, '24j. Club Lead cannot see count for other club event in GET /api/events');
+
+    // 24k. Club 1 Lead can see count for own club event in GET /api/events/:id
+    const res24Pres1DetailOwn = await apiRequest('GET', `/api/events/${club1EventId}`, undefined, pres1Token);
+    assert(res24Pres1DetailOwn.body.event.currentRegistrations === 2, '24k. Club Lead sees count (2) in GET /api/events/:id for own club');
+
+    // 24l. Club 1 Lead CANNOT see count for other club event in GET /api/events/:id
+    const res24Pres1DetailOther = await apiRequest('GET', `/api/events/${club2EventId}`, undefined, pres1Token);
+    assert(res24Pres1DetailOther.body.event.currentRegistrations === undefined, '24l. Club Lead receives undefined count for other club event in GET /api/events/:id');
+
+    // 24m. College Admin can see counts across all clubs
+    const res24AdminEvents = await apiRequest('GET', '/api/events', undefined, adminToken);
+    const adminClub1Evt = res24AdminEvents.body.events.find((e: any) => (e._id || e.id) === club1EventId);
+    const adminClub2Evt = res24AdminEvents.body.events.find((e: any) => (e._id || e.id) === club2EventId);
+    assert(adminClub1Evt && adminClub1Evt.currentRegistrations === 2, '24m. Admin sees count for Club 1 event');
+    assert(adminClub2Evt && typeof adminClub2Evt.currentRegistrations === 'number', '24n. Admin sees count for Club 2 event');
+
+    const res24AdminDetail = await apiRequest('GET', `/api/events/${club1EventId}`, undefined, adminToken);
+    assert(res24AdminDetail.body.event.currentRegistrations === 2, '24o. Admin sees count in GET /api/events/:id');
+
+    // 24p. Unauthenticated user rejected with 401
+    const res24UnauthEvents = await apiRequest('GET', '/api/events');
+    assert(res24UnauthEvents.status === 401, '24p. Unauthenticated user rejected on GET /api/events (401)');
+    const res24UnauthDetail = await apiRequest('GET', `/api/events/${club1EventId}`);
+    assert(res24UnauthDetail.status === 401, '24q. Unauthenticated user rejected on GET /api/events/:id (401)');
+
+    // 25. Event lifecycle status and registration URL regression tests:
+    // 25a. Newly created event has PENDING_APPROVAL and empty rescheduledHistory (NOT rescheduled)
+    const res25NewEvent = await apiRequest(
+      'POST',
+      '/api/events',
+      {
+        title: 'New Hackathon 2026',
+        eventType: 'Hackathon',
+        category: EventCategory.CLUB,
+        date: '2026-11-22',
+        startTime: '09:00 AM',
+        endTime: '05:00 PM',
+        clubId: club1._id,
+        venueId: mainAuditorium._id,
+        registrationRequired: true,
+        registrationLink: 'https://devpost.com/hackathons/campusconnect2026'
+      },
+      pres1Token
+    );
+    assert(res25NewEvent.status === 201, '25a. Create new event with registrationLink returns 201');
+    const newEvent = res25NewEvent.body.event;
+    const lifecycleEventId = newEvent.id || newEvent._id;
+    assert(newEvent.status === EventStatus.PENDING_APPROVAL, '25b. Newly created event has status PENDING_APPROVAL');
+    assert(
+      !newEvent.rescheduledHistory || newEvent.rescheduledHistory.length === 0,
+      '25c. Newly created event has empty rescheduledHistory (not rescheduled)'
+    );
+    assert(
+      newEvent.registrationMethod === RegistrationMethod.EXTERNAL,
+      '25d. Providing registrationLink automatically sets registrationMethod to EXTERNAL'
+    );
+    assert(
+      newEvent.externalRegistrationUrl === 'https://devpost.com/hackathons/campusconnect2026',
+      '25e. Registration URL is preserved in externalRegistrationUrl'
+    );
+
+    // 25f. Approve event: status transitions to APPROVED, rescheduledHistory remains empty
+    const res25Approve = await apiRequest(
+      'PATCH',
+      `/api/events/${lifecycleEventId}/approve`,
+      { comments: 'Approved by Admin' },
+      adminToken
+    );
+    assert(res25Approve.status === 200, '25f. Admin approves event returns 200', res25Approve);
+    assert(res25Approve.body?.event?.status === EventStatus.APPROVED, '25g. Event status is APPROVED');
+    assert(
+      !res25Approve.body.event.rescheduledHistory || res25Approve.body.event.rescheduledHistory.length === 0,
+      '25h. Approved event has empty rescheduledHistory (not marked as rescheduled)'
+    );
+
+    // 25i. Genuinely reschedule event: updates date and records reschedule history
+    const res25Reschedule = await apiRequest(
+      'PUT',
+      `/api/events/${lifecycleEventId}`,
+      {
+        date: '2026-11-25',
+        status: EventStatus.RESCHEDULED,
+        rescheduledHistory: [
+          {
+            previousDate: new Date('2026-11-22'),
+            newDate: new Date('2026-11-25'),
+            reason: 'Speaker schedule adjustment'
+          }
+        ]
+      },
+      pres1Token
+    );
+    assert(res25Reschedule.status === 200, '25i. Rescheduling event returns 200', res25Reschedule);
+    assert(
+      res25Reschedule.body.event.status === EventStatus.RESCHEDULED,
+      '25j. Genuinely rescheduled event has status RESCHEDULED'
+    );
+    assert(
+      Array.isArray(res25Reschedule.body.event.rescheduledHistory) &&
+        res25Reschedule.body.event.rescheduledHistory.length > 0,
+      '25k. Genuinely rescheduled event has history entries in rescheduledHistory'
+    );
+
+    // 25l. Rejection and cancellation statuses are preserved
+    const res25Reject = await apiRequest(
+      'PATCH',
+      `/api/events/${lifecycleEventId}/reject`,
+      { reason: 'Venue conflict' },
+      adminToken
+    );
+    assert(res25Reject.status === 200, '25l. Admin rejects event returns 200', res25Reject);
+    assert(res25Reject.body.event.status === EventStatus.REJECTED, '25m. Event status is REJECTED');
+
+    const res25Cancel = await apiRequest(
+      'PATCH',
+      `/api/events/${lifecycleEventId}/cancel`,
+      {},
+      adminToken
+    );
+    assert(res25Cancel.status === 200, '25n. Admin cancels event returns 200', res25Cancel);
+    assert(res25Cancel.body.event.status === EventStatus.CANCELLED, '25o. Event status is CANCELLED');
 
     console.log(`\n========================================`);
     console.log(`Event Tests Finished: ${passedTests}/${totalTests} Passed.`);

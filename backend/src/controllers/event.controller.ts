@@ -6,6 +6,7 @@ import { Approval, ApprovalAction } from '../models/Approval.js';
 import { Club } from '../models/Club.js';
 import { Venue } from '../models/Venue.js';
 import { UserRole } from '../models/User.js';
+import { ClubMembership, ClubMembershipRole } from '../models/ClubMembership.js';
 import { isAuthorizedLeadOrAdmin } from './clubMembership.controller.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { generateEventRegistrationsPdf } from '../utils/registrationPdfService.js';
@@ -14,6 +15,33 @@ import {
   timeStringToMinutes
 } from '../utils/venueConflict.js';
 import { isEventPast } from '../utils/eventTimeUtils.js';
+
+/**
+ * Helper to determine if an authenticated user is authorized to view an event's registration count.
+ * - College Admin: authorized across all clubs and events.
+ * - Club Lead / President: authorized ONLY if event has an associated club and user has an active LEAD membership in it.
+ * - Student: never authorized.
+ * - Unauthenticated: never authorized.
+ */
+export const canUserViewEventRegistrationCount = async (
+  user: AuthenticatedRequest['user'],
+  eventClubId?: string | mongoose.Types.ObjectId | null
+): Promise<boolean> => {
+  if (!user) return false;
+  if (user.role === UserRole.STUDENT) return false;
+  if (user.role === UserRole.COLLEGE_ADMIN) return true;
+  if (user.role === UserRole.CLUB_PRESIDENT && eventClubId) {
+    const rawClubId = (eventClubId as any)?._id || eventClubId;
+    const activeLead = await ClubMembership.findOne({
+      clubId: rawClubId,
+      userId: user._id,
+      role: ClubMembershipRole.LEAD,
+      isActive: true
+    });
+    return !!activeLead;
+  }
+  return false;
+};
 
 /**
  * POST /api/events
@@ -338,8 +366,12 @@ export const createEvent = async (
       proposedBy: user._id, // Strictly derived from req.user
       maxParticipants: maxParticipants !== undefined && maxParticipants !== null ? Number(maxParticipants) : null,
       registrationRequired: Boolean(registrationRequired),
-      registrationMethod: registrationMethod || RegistrationMethod.CAMPUSCONNECT,
-      externalRegistrationUrl: externalRegistrationUrl || '',
+      registrationMethod:
+        registrationMethod ||
+        (externalRegistrationUrl || req.body.registrationLink
+          ? RegistrationMethod.EXTERNAL
+          : RegistrationMethod.CAMPUSCONNECT),
+      externalRegistrationUrl: (externalRegistrationUrl || req.body.registrationLink || '').trim(),
       externalRegistrationQrUrl: externalRegistrationQrUrl || '',
       registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : null,
       eligibility: eligibility || '',
@@ -352,10 +384,18 @@ export const createEvent = async (
 
     await newEvent.save();
 
+    const eventJson = newEvent.toJSON();
+    eventJson.isFull = false;
+
+    const canView = await canUserViewEventRegistrationCount(user, newEvent.clubId);
+    if (canView) {
+      eventJson.currentRegistrations = 0;
+    }
+
     res.status(201).json({
       success: true,
       message: 'Event created successfully.',
-      event: newEvent.toJSON()
+      event: eventJson
     });
   } catch (error) {
     next(error);
@@ -382,10 +422,58 @@ export const getEvents = async (
     const includePast = req.query.includePast === 'true' || req.query.history === 'true';
     const activeEvents = includePast ? events : events.filter((e) => !isEventPast(e));
 
+    const eventIds = activeEvents.map((e) => e._id);
+    const regCounts = await EventRegistration.aggregate([
+      { $match: { eventId: { $in: eventIds } } },
+      { $group: { _id: '$eventId', count: { $sum: 1 } } }
+    ]);
+
+    const countMap = new Map<string, number>();
+    for (const item of regCounts) {
+      countMap.set(item._id.toString(), item.count);
+    }
+
+    const user = req.user;
+    let authorizedClubIds: Set<string> | null = null;
+    if (user && user.role === UserRole.CLUB_PRESIDENT) {
+      const leadMemberships = await ClubMembership.find({
+        userId: user._id,
+        role: ClubMembershipRole.LEAD,
+        isActive: true
+      }).select('clubId');
+      authorizedClubIds = new Set(leadMemberships.map((m) => m.clubId.toString()));
+    }
+
+    const formattedEvents = activeEvents.map((e) => {
+      const json = e.toJSON();
+      const count = countMap.get(e._id.toString()) || 0;
+
+      // Capacity enforcement: indicate whether registration is full without leaking counts
+      if (typeof e.maxParticipants === 'number' && e.maxParticipants > 0) {
+        json.isFull = count >= e.maxParticipants;
+      } else {
+        json.isFull = false;
+      }
+
+      // Role-based restriction: College Admin sees all; Club Lead sees only own club; Students see none
+      if (user && user.role === UserRole.COLLEGE_ADMIN) {
+        json.currentRegistrations = count;
+      } else if (authorizedClubIds && e.clubId) {
+        const rawClubId = (e.clubId as any)?._id
+          ? (e.clubId as any)._id.toString()
+          : e.clubId.toString();
+        if (authorizedClubIds.has(rawClubId)) {
+          json.currentRegistrations = count;
+        }
+      }
+
+      return json;
+    });
+
     res.status(200).json({
       success: true,
-      count: activeEvents.length,
-      events: activeEvents.map((e) => e.toJSON())
+      count: formattedEvents.length,
+      events: formattedEvents
     });
   } catch (error) {
     next(error);
@@ -426,9 +514,28 @@ export const getEventById = async (
       return;
     }
 
+    const currentRegistrations = await EventRegistration.countDocuments({
+      eventId: event._id
+    });
+
+    const eventJson = event.toJSON();
+    if (typeof event.maxParticipants === 'number' && event.maxParticipants > 0) {
+      eventJson.isFull = currentRegistrations >= event.maxParticipants;
+    } else {
+      eventJson.isFull = false;
+    }
+
+    const canView = await canUserViewEventRegistrationCount(
+      req.user,
+      (event.clubId as any)?._id || event.clubId
+    );
+    if (canView) {
+      eventJson.currentRegistrations = currentRegistrations;
+    }
+
     res.status(200).json({
       success: true,
-      event: event.toJSON()
+      event: eventJson
     });
   } catch (error) {
     next(error);
@@ -648,7 +755,13 @@ export const updateEvent = async (
     if (req.body.startTime !== undefined) event.startTime = req.body.startTime.trim();
     if (req.body.endTime !== undefined) event.endTime = req.body.endTime.trim();
     if (req.body.registrationRequired !== undefined) event.registrationRequired = Boolean(req.body.registrationRequired);
-    if (req.body.externalRegistrationUrl !== undefined) event.externalRegistrationUrl = req.body.externalRegistrationUrl;
+    const incomingExternalUrl = req.body.externalRegistrationUrl !== undefined ? req.body.externalRegistrationUrl : req.body.registrationLink;
+    if (incomingExternalUrl !== undefined) {
+      event.externalRegistrationUrl = String(incomingExternalUrl).trim();
+      if (!req.body.registrationMethod && event.externalRegistrationUrl) {
+        event.registrationMethod = RegistrationMethod.EXTERNAL;
+      }
+    }
     if (req.body.externalRegistrationQrUrl !== undefined) event.externalRegistrationQrUrl = req.body.externalRegistrationQrUrl;
     if (req.body.registrationDeadline !== undefined) {
       event.registrationDeadline = req.body.registrationDeadline ? new Date(req.body.registrationDeadline) : null;
@@ -660,15 +773,40 @@ export const updateEvent = async (
     if (req.body.contactPhone !== undefined) event.contactPhone = req.body.contactPhone;
     if (req.body.rejectionReason !== undefined) event.rejectionReason = req.body.rejectionReason;
     if (req.body.changeComments !== undefined) event.changeComments = req.body.changeComments;
+    if (req.body.rescheduledHistory !== undefined) {
+      if (Array.isArray(req.body.rescheduledHistory)) {
+        event.rescheduledHistory = req.body.rescheduledHistory;
+      } else if (req.body.rescheduledHistory && typeof req.body.rescheduledHistory === 'object') {
+        event.rescheduledHistory = [req.body.rescheduledHistory];
+      }
+    }
 
     // proposedBy cannot be modified
     // Save updated document
     await event.save();
 
+    const currentRegistrations = await EventRegistration.countDocuments({
+      eventId: event._id
+    });
+    const eventJson = event.toJSON();
+    if (typeof event.maxParticipants === 'number' && event.maxParticipants > 0) {
+      eventJson.isFull = currentRegistrations >= event.maxParticipants;
+    } else {
+      eventJson.isFull = false;
+    }
+
+    const canView = await canUserViewEventRegistrationCount(
+      req.user,
+      (event.clubId as any)?._id || event.clubId
+    );
+    if (canView) {
+      eventJson.currentRegistrations = currentRegistrations;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Event updated successfully.',
-      event: event.toJSON()
+      event: eventJson
     });
   } catch (error) {
     next(error);

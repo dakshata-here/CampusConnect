@@ -54,6 +54,8 @@ export interface IEvent extends Document {
   clubId?: Types.ObjectId | null;
   proposedBy: Types.ObjectId;
   maxParticipants?: number | null;
+  currentRegistrations?: number;
+  isFull?: boolean;
   registrationRequired: boolean;
   registrationMethod: RegistrationMethod;
   externalRegistrationUrl: string;

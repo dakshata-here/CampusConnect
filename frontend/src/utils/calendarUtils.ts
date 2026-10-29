@@ -594,3 +594,48 @@ export function isEventPast(event: EventTimeInput, referenceTime: Date = new Dat
 export function isEventActive(event: EventTimeInput, referenceTime: Date = new Date()): boolean {
   return !isEventPast(event, referenceTime);
 }
+
+/**
+ * Validates and normalizes an external URL.
+ * Accepts standard http/https URLs or domains (prepending https://).
+ * Rejects javascript:, data:, or malformed links to protect students.
+ */
+export function getSafeExternalUrl(url?: string | null): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === '#' || trimmed.toLowerCase().startsWith('javascript:')) {
+    return null;
+  }
+  try {
+    const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      // Must have a valid hostname containing at least one dot or localhost
+      if (parsed.hostname && (parsed.hostname.includes('.') || parsed.hostname === 'localhost')) {
+        return candidate;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Returns true if an event has genuinely been rescheduled.
+ * Newly created events with empty rescheduledHistory array are NOT considered rescheduled.
+ */
+export function isEventRescheduled(event?: Partial<CampusEvent> | null): boolean {
+  if (!event) return false;
+  const status = (event.status || '').toLowerCase();
+  if (status === 'rescheduled') return true;
+
+  if (Array.isArray(event.rescheduledHistory)) {
+    return event.rescheduledHistory.length > 0;
+  }
+  if (event.rescheduledHistory && typeof event.rescheduledHistory === 'object') {
+    return Object.keys(event.rescheduledHistory).length > 0;
+  }
+
+  return false;
+}

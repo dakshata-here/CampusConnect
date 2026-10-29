@@ -225,7 +225,7 @@ export const getEventRegistrations = async (
       return;
     }
 
-    const { eventId } = req.params;
+    const eventId = req.params.eventId || req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       res.status(400).json({

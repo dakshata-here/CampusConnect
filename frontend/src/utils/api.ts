@@ -180,17 +180,41 @@ export function mapBackendEventToCampusEvent(raw: any): CampusEvent {
       : undefined,
     proposedBy: raw.proposedBy,
     registrationRequired: Boolean(raw.registrationRequired),
-    registrationMethod: raw.registrationMethod || 'CAMPUSCONNECT',
-    registrationType: raw.registrationType || (raw.registrationMethod === 'EXTERNAL' ? 'external' : 'internal'),
-    registrationLink: raw.externalRegistrationUrl || raw.registrationLink,
-    externalRegistrationUrl: raw.externalRegistrationUrl,
+    registrationMethod: (() => {
+      const explicit = raw.registrationMethod;
+      const hasUrl = Boolean((raw.externalRegistrationUrl || raw.registrationLink || '').trim());
+      if (explicit) return explicit;
+      return hasUrl ? ('EXTERNAL' as const) : ('CAMPUSCONNECT' as const);
+    })(),
+    registrationType: (() => {
+      if (raw.registrationType === 'qr' || raw.externalRegistrationQrUrl || raw.registrationQrUrl) return 'qr';
+      const hasUrl = Boolean((raw.externalRegistrationUrl || raw.registrationLink || '').trim());
+      const isExternalMethod = String(raw.registrationMethod || '').toUpperCase() === 'EXTERNAL';
+      if (isExternalMethod || hasUrl || raw.registrationType === 'external' || raw.registrationType === 'link') {
+        return 'external';
+      }
+      return 'internal';
+    })(),
+    registrationLink: (raw.externalRegistrationUrl || raw.registrationLink || '').trim() || undefined,
+    externalRegistrationUrl: (raw.externalRegistrationUrl || raw.registrationLink || '').trim() || undefined,
     registrationQrUrl: raw.externalRegistrationQrUrl || raw.registrationQrUrl,
     externalRegistrationQrUrl: raw.externalRegistrationQrUrl,
     registrationDeadline: raw.registrationDeadline
       ? new Date(raw.registrationDeadline).toISOString().split('T')[0]
       : null,
     maxParticipants: raw.maxParticipants,
-    currentRegistrations: raw.currentRegistrations,
+    currentRegistrations:
+      raw.currentRegistrations !== undefined && raw.currentRegistrations !== null
+        ? Number(raw.currentRegistrations)
+        : undefined,
+    isFull:
+      raw.isFull !== undefined
+        ? Boolean(raw.isFull)
+        : typeof raw.maxParticipants === 'number' &&
+          raw.maxParticipants > 0 &&
+          typeof raw.currentRegistrations === 'number'
+        ? Number(raw.currentRegistrations) >= raw.maxParticipants
+        : false,
     meetingLink: raw.meetingLink,
     eligibility: raw.eligibility || 'Open to all students',
     requiredMaterials: raw.requiredMaterials || '',
@@ -205,7 +229,12 @@ export function mapBackendEventToCampusEvent(raw: any): CampusEvent {
     createdByRole: typeof raw.proposedBy === 'object' ? raw.proposedBy?.role : raw.createdByRole,
     rejectionReason: raw.rejectionReason,
     changeComments: raw.changeComments,
-    rescheduledHistory: raw.rescheduledHistory,
+    rescheduledHistory:
+      Array.isArray(raw.rescheduledHistory) && raw.rescheduledHistory.length > 0
+        ? raw.rescheduledHistory
+        : (raw.rescheduledHistory && typeof raw.rescheduledHistory === 'object' && !Array.isArray(raw.rescheduledHistory) && Object.keys(raw.rescheduledHistory).length > 0)
+        ? raw.rescheduledHistory
+        : undefined,
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : undefined,
     updatedAt: raw.updatedAt ? new Date(raw.updatedAt).toISOString() : undefined
   };
@@ -386,8 +415,15 @@ export async function createEventApi(eventData: Partial<CampusEvent>): Promise<C
     clubId: eventData.clubId || undefined,
     maxParticipants: eventData.maxParticipants ? Number(eventData.maxParticipants) : null,
     registrationRequired: Boolean(eventData.registrationRequired),
-    registrationMethod: eventData.registrationMethod || 'CAMPUSCONNECT',
-    externalRegistrationUrl: eventData.externalRegistrationUrl || eventData.registrationLink || '',
+    registrationMethod:
+      eventData.registrationMethod ||
+      (eventData.registrationType === 'external' ||
+      eventData.registrationType === 'link' ||
+      eventData.externalRegistrationUrl ||
+      eventData.registrationLink
+        ? 'EXTERNAL'
+        : 'CAMPUSCONNECT'),
+    externalRegistrationUrl: (eventData.externalRegistrationUrl || eventData.registrationLink || '').trim(),
     externalRegistrationQrUrl: eventData.externalRegistrationQrUrl || eventData.registrationQrUrl || '',
     registrationDeadline: eventData.registrationDeadline ? new Date(eventData.registrationDeadline) : null,
     eligibility: eventData.eligibility || 'Open to all students',
@@ -417,6 +453,12 @@ export async function updateEventApi(id: string, updates: Partial<CampusEvent>):
   }
   if (payload.status) {
     payload.status = String(payload.status).toUpperCase();
+  }
+  if (payload.registrationLink && payload.externalRegistrationUrl === undefined) {
+    payload.externalRegistrationUrl = String(payload.registrationLink).trim();
+  }
+  if (payload.externalRegistrationUrl && !payload.registrationMethod) {
+    payload.registrationMethod = 'EXTERNAL';
   }
 
   const data = await apiFetch<{
